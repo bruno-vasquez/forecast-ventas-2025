@@ -9,9 +9,7 @@ import joblib
 import matplotlib.pyplot as plt
 
 
-# ----------------------------
 # Config
-# ----------------------------
 st.set_page_config(
     page_title="Forecast Ventas 2025 - Cochabamba",
     page_icon="📈",
@@ -19,9 +17,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ----------------------------
-# Custom CSS - ESTILO CLARO (mejorado)
-# ----------------------------
+
 st.markdown(
     """
 <style>
@@ -177,17 +173,15 @@ hr {
     unsafe_allow_html=True,
 )
 
-# ----------------------------
 # Paths (repo)
-# ----------------------------
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODELS_DIR = os.path.join(BASE_DIR, "modelos")
 PROPHET_PATH = os.path.join(MODELS_DIR, "prophet_model.joblib")
 SARIMAX_PATH = os.path.join(MODELS_DIR, "sarimax_model.joblib")
 
-# ----------------------------
 # Feriados 2025
-# ----------------------------
+
 FERIADOS_2025 = pd.to_datetime(
     [
         "2025-01-01", "2025-01-22", "2025-03-03",
@@ -197,9 +191,6 @@ FERIADOS_2025 = pd.to_datetime(
     ]
 )
 
-# ----------------------------
-# Helpers
-# ----------------------------
 @st.cache_resource
 def load_model(path: str):
     return joblib.load(path)
@@ -225,7 +216,7 @@ def apply_operational_zeros(pred: pd.Series, feriados: pd.DatetimeIndex) -> pd.S
     """Siempre activo (por defecto): domingos y feriados -> 0, y no negativos."""
     pred = pred.copy()
     pred.index = pd.to_datetime(pred.index)
-    mask = (pred.index.dayofweek == 6) | (pred.index.isin(pd.to_datetime(feriados)))  # domingo=6
+    mask = (pred.index.dayofweek == 6) | (pred.index.isin(pd.to_datetime(feriados)))
     pred.loc[mask] = 0
     pred.loc[pred < 0] = 0
     return pred
@@ -259,15 +250,13 @@ def plot_with_ci(index, mean, low=None, up=None, title="", color="#3b82f6"):
     return fig
 
 
-# ----------------------------
 # Header
-# ----------------------------
+
 st.markdown('<h1 class="main-title">📈 Forecast de Ventas 2025</h1>', unsafe_allow_html=True)
 st.markdown('<div class="main-subtitle">Comparación Prophet vs SARIMAX | Cochabamba, Bolivia</div>', unsafe_allow_html=True)
 
-# ----------------------------
 # Sidebar
-# ----------------------------
+
 with st.sidebar:
     st.markdown("### ⚙️ Configuración")
     st.markdown("---")
@@ -297,22 +286,21 @@ dates_2025 = pd.date_range("2025-01-01", "2025-12-31", freq="D")
 mask_range = (dates_2025 >= pd.to_datetime(start_date)) & (dates_2025 <= pd.to_datetime(end_date))
 dates_view = dates_2025[mask_range]
 
-# ----------------------------
 # Load & Predict (desde repo)
-# ----------------------------
+
 with st.spinner("🔄 Cargando modelos desde el repo..."):
     # Validación existencia
     if not os.path.exists(PROPHET_PATH):
-        st.error(f"❌ No se encontró: {PROPHET_PATH}")
+        st.error(f" No se encontró: {PROPHET_PATH}")
         st.stop()
     if not os.path.exists(SARIMAX_PATH):
-        st.error(f"❌ No se encontró: {SARIMAX_PATH}")
+        st.error(f" No se encontró: {SARIMAX_PATH}")
         st.stop()
 
     m1 = load_model(PROPHET_PATH)
     m2 = load_model(SARIMAX_PATH)
 
-    # ✅ Swap automático si están cruzados
+    # Swap automático si están cruzados
     if is_prophet_model(m1) and is_statsmodels_model(m2):
         prophet_model, sarimax_model = m1, m2
         swapped = False
@@ -320,13 +308,13 @@ with st.spinner("🔄 Cargando modelos desde el repo..."):
         prophet_model, sarimax_model = m2, m1
         swapped = True
     else:
-        st.error("❌ No pude identificar claramente Prophet y SARIMAX en los .joblib del repo.")
+        st.error(" No pude identificar claramente Prophet y SARIMAX en los .joblib del repo.")
         st.write("prophet_model.joblib:", type(m1), "module:", m1.__class__.__module__)
         st.write("sarimax_model.joblib:", type(m2), "module:", m2.__class__.__module__)
         st.stop()
 
     if swapped:
-        st.warning("⚠️ Tus archivos .joblib están cruzados. Apliqué swap automático (Prophet ↔ SARIMAX).")
+        st.warning(" Tus archivos .joblib están cruzados. Apliqué swap automático (Prophet ↔ SARIMAX).")
 
     # Exógena 2025
     exog_2025 = pd.DataFrame(index=dates_2025)
@@ -349,7 +337,7 @@ with st.spinner("🔄 Cargando modelos desde el repo..."):
     low_s = pd.Series(np.asarray(ci_s.iloc[:, 0]), index=dates_2025)
     up_s  = pd.Series(np.asarray(ci_s.iloc[:, 1]), index=dates_2025)
 
-    # ✅ Ceros operativos SIEMPRE activos (sin checkbox)
+    # Ceros operativos SIEMPRE activos (sin checkbox)
     pred_prophet = apply_operational_zeros(pred_prophet, FERIADOS_2025)
     pred_sarimax = apply_operational_zeros(pred_sarimax, FERIADOS_2025)
     low_p = apply_operational_zeros(low_p, FERIADOS_2025)
@@ -370,11 +358,7 @@ with st.spinner("🔄 Cargando modelos desde el repo..."):
         lp_view, up_view = lp_view.cumsum(), up_view.cumsum()
         ls_view, us_view = ls_view.cumsum(), us_view.cumsum()
 
-st.success("✅ Listo (modelos cargados desde repo)")
-
-# ----------------------------
 # Tabs
-# ----------------------------
 tab1, tab2, tab3, tab4 = st.tabs(["📊 Resumen", "🔄 Comparación", "🔎 Detalle", "📈 Estadísticas"])
 
 with tab1:
