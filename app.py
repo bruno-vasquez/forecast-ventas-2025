@@ -17,7 +17,9 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-
+# =========================
+# ESTILOS (Light + Dark auto)
+# =========================
 st.markdown(
     """
 <style>
@@ -25,29 +27,97 @@ st.markdown(
 
 html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
 
-/* Fondo general claro */
+/* =========================
+   THEME TOKENS (Light base)
+   ========================= */
+:root{
+  --bg-0: #f7fafc;
+  --bg-1: rgba(255,255,255,0.90);
+  --bg-2: rgba(255,255,255,0.92);
+
+  --text-0: #0f172a;
+  --text-1: #334155;
+  --muted: #64748b;
+
+  --border: rgba(15,23,42,0.10);
+  --shadow: 0 10px 24px rgba(15,23,42,0.08);
+
+  --accent-0: #3b82f6;
+  --accent-1: #06b6d4;
+  --good: #10b981;
+  --warn: #f59e0b;
+  --bad: #ef4444;
+
+  --tab-bg: rgba(255,255,255,0.60);
+  --tab-active: linear-gradient(120deg, rgba(59,130,246,0.18) 0%, rgba(6,182,212,0.18) 100%);
+  --btn: linear-gradient(120deg, #3b82f6 0%, #06b6d4 100%);
+  --btn-dl: linear-gradient(120deg, #10b981 0%, #059669 100%);
+}
+
+/* =========================
+   DARK MODE OVERRIDES
+   ========================= */
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg-0: #0b1220;
+    --bg-1: rgba(15,23,42,0.82);
+    --bg-2: rgba(15,23,42,0.92);
+
+    --text-0: #e5e7eb;
+    --text-1: #cbd5e1;
+    --muted: #94a3b8;
+
+    --border: rgba(148,163,184,0.16);
+    --shadow: 0 14px 28px rgba(0,0,0,0.35);
+
+    --tab-bg: rgba(15,23,42,0.55);
+    --tab-active: linear-gradient(120deg, rgba(59,130,246,0.22) 0%, rgba(6,182,212,0.20) 100%);
+  }
+
+  /* Ajuste fino de inputs en dark */
+  [data-baseweb="input"] input,
+  [data-baseweb="textarea"] textarea,
+  [data-baseweb="select"] div{
+    color: var(--text-0) !important;
+  }
+}
+
+/* =========================
+   APP BACKGROUND
+   ========================= */
 [data-testid="stAppViewContainer"]{
   background:
-    radial-gradient(900px 520px at 18% 10%, rgba(59,130,246,0.12), transparent 65%),
-    radial-gradient(900px 520px at 82% 12%, rgba(6,182,212,0.10), transparent 65%),
+    radial-gradient(900px 520px at 18% 10%, rgba(59,130,246,0.14), transparent 65%),
+    radial-gradient(900px 520px at 82% 12%, rgba(6,182,212,0.12), transparent 65%),
     radial-gradient(1000px 640px at 50% 95%, rgba(16,185,129,0.10), transparent 65%),
-    #f7fafc;
-  color: #0f172a;
+    var(--bg-0);
+  color: var(--text-0);
 }
 
-/* Sidebar claro */
+/* =========================
+   SIDEBAR
+   ========================= */
 [data-testid="stSidebar"]{
-  background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
-  border-right: 1px solid rgba(15,23,42,0.10);
+  background: linear-gradient(180deg, rgba(15,23,42,0.75) 0%, rgba(2,6,23,0.85) 100%);
+  border-right: 1px solid var(--border);
 }
-[data-testid="stSidebar"] * { color: #0f172a !important; }
-[data-testid="stSidebar"] .stMarkdown { color: #0f172a !important; }
+@media (prefers-color-scheme: light){
+  [data-testid="stSidebar"]{
+    background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
+  }
+}
 
-/* Título principal */
+[data-testid="stSidebar"] * { color: var(--text-0) !important; }
+[data-testid="stSidebar"] .stMarkdown { color: var(--text-0) !important; }
+[data-testid="stSidebar"] [data-testid="stCaptionContainer"] { color: var(--muted) !important; }
+
+/* =========================
+   TITLES
+   ========================= */
 .main-title {
   font-size: 2.6rem;
   font-weight: 800;
-  background: linear-gradient(120deg, #1e3a8a 0%, #3b82f6 45%, #06b6d4 100%);
+  background: linear-gradient(120deg, #60a5fa 0%, #3b82f6 45%, #22d3ee 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   text-align: center;
@@ -56,32 +126,39 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
 }
 .main-subtitle{
   text-align:center;
-  color:#475569;
+  color: var(--muted);
   font-size: 1.05rem;
   margin-bottom: 1.6rem;
 }
 
-/* Secciones */
 .subtitle {
   font-size: 1.35rem;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--text-0);
   margin: 1.2rem 0 0.8rem 0;
   padding-bottom: 0.5rem;
   border-bottom: 3px solid rgba(59,130,246,0.35);
 }
 
-/* Cards */
+/* =========================
+   CARDS
+   ========================= */
 .custom-card {
-  background: rgba(255,255,255,0.90);
+  background: var(--bg-1);
   border-radius: 14px;
   padding: 1.2rem 1.2rem;
-  box-shadow: 0 10px 24px rgba(15,23,42,0.08);
+  box-shadow: var(--shadow);
   margin: 0.8rem 0;
-  border: 1px solid rgba(15,23,42,0.10);
+  border: 1px solid var(--border);
+}
+.custom-card h1, .custom-card h2, .custom-card h3, .custom-card h4,
+.custom-card p, .custom-card span, .custom-card div {
+  color: var(--text-0) !important;
 }
 
-/* Badges */
+/* =========================
+   BADGES
+   ========================= */
 .badge {
   display: inline-block;
   padding: 0.25rem 0.75rem;
@@ -89,84 +166,96 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
   font-size: 0.85rem;
   font-weight: 700;
   margin: 0.25rem 0.25rem 0.25rem 0;
-  border: 1px solid rgba(15,23,42,0.10);
+  border: 1px solid var(--border);
 }
 .badge-prophet {
-  background: rgba(16,185,129,0.14);
-  color: #065f46;
-  border-color: rgba(16,185,129,0.25);
+  background: rgba(16,185,129,0.16);
+  color: #a7f3d0;
+  border-color: rgba(16,185,129,0.22);
 }
 .badge-sarimax {
   background: rgba(245,158,11,0.16);
-  color: #92400e;
-  border-color: rgba(245,158,11,0.28);
+  color: #fde68a;
+  border-color: rgba(245,158,11,0.22);
 }
 
-/* Tabs */
+/* =========================
+   TABS
+   ========================= */
 .stTabs [data-baseweb="tab-list"] {
   gap: 8px;
-  background-color: rgba(255,255,255,0.60);
-  border: 1px solid rgba(15,23,42,0.10);
+  background-color: var(--tab-bg);
+  border: 1px solid var(--border);
   border-radius: 14px;
   padding: 0.35rem;
 }
 .stTabs [data-baseweb="tab"] {
   height: 46px;
-  background-color: rgba(255,255,255,0.92);
+  background-color: var(--bg-2);
   border-radius: 12px;
-  color: #334155;
-  font-weight: 700;
+  color: var(--text-1);
+  font-weight: 800;
   padding: 0 1.4rem;
   transition: all 0.25s ease;
-  border: 1px solid rgba(15,23,42,0.08);
+  border: 1px solid var(--border);
 }
 .stTabs [aria-selected="true"] {
-  background: linear-gradient(120deg, rgba(59,130,246,0.18) 0%, rgba(6,182,212,0.18) 100%) !important;
-  color: #0f172a !important;
-  box-shadow: 0 8px 18px rgba(59,130,246,0.18);
-  border-color: rgba(59,130,246,0.18) !important;
+  background: var(--tab-active) !important;
+  color: var(--text-0) !important;
+  box-shadow: 0 10px 22px rgba(59,130,246,0.20);
+  border-color: rgba(59,130,246,0.22) !important;
 }
 
-/* Botones */
+/* =========================
+   BUTTONS
+   ========================= */
 .stButton>button {
-  background: linear-gradient(120deg, #3b82f6 0%, #06b6d4 100%);
+  background: var(--btn);
   color: white;
   border: none;
   border-radius: 12px;
   padding: 0.6rem 1.4rem;
-  font-weight: 700;
+  font-weight: 800;
   transition: all 0.25s ease;
 }
 .stButton>button:hover {
   transform: translateY(-1px);
-  box-shadow: 0 10px 22px rgba(59, 130, 246, 0.25);
+  box-shadow: 0 12px 24px rgba(59, 130, 246, 0.30);
 }
-
 .stDownloadButton>button {
-  background: linear-gradient(120deg, #10b981 0%, #059669 100%);
+  background: var(--btn-dl);
   color: white;
   border-radius: 12px;
   padding: 0.6rem 1.2rem;
-  font-weight: 700;
+  font-weight: 800;
   border: none;
 }
 
-/* Dataframe header */
+/* =========================
+   DATAFRAME
+   ========================= */
 .dataframe thead tr th {
   background: linear-gradient(120deg, rgba(30,58,138,0.95) 0%, rgba(59,130,246,0.95) 100%) !important;
   color: white !important;
-  font-weight: 800 !important;
+  font-weight: 900 !important;
 }
 .dataframe tbody tr:hover {
-  background-color: rgba(59,130,246,0.06) !important;
+  background-color: rgba(59,130,246,0.10) !important;
 }
 
-/* Separador */
+/* =========================
+   HR / SEPARATOR
+   ========================= */
 hr {
   margin: 1.8rem 0;
   border: none;
   height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(59,130,246,0.60), transparent);
+  background: linear-gradient(90deg, transparent, rgba(59,130,246,0.55), transparent);
+}
+
+/* Improve default text colors in main area */
+.block-container, .stMarkdown, .stText, .stCaption, .stSubheader, .stHeader {
+  color: var(--text-0);
 }
 </style>
 """,
@@ -174,14 +263,12 @@ hr {
 )
 
 # Paths (repo)
-
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODELS_DIR = os.path.join(BASE_DIR, "modelos")
 PROPHET_PATH = os.path.join(MODELS_DIR, "prophet_model.joblib")
 SARIMAX_PATH = os.path.join(MODELS_DIR, "sarimax_model.joblib")
 
 # Feriados 2025
-
 FERIADOS_2025 = pd.to_datetime(
     [
         "2025-01-01", "2025-01-22", "2025-03-03",
@@ -231,32 +318,52 @@ def resample_view(s: pd.Series, vista: str) -> pd.Series:
     return s
 
 def plot_with_ci(index, mean, low=None, up=None, title="", color="#3b82f6"):
+    # Estilo dark-friendly (funciona bien también en claro)
     fig, ax = plt.subplots(figsize=(14, 6))
-    ax.set_facecolor("#f8fafc")
-    fig.patch.set_facecolor("white")
 
-    ax.plot(index, mean, label="Predicción", linewidth=2.6, color=color, zorder=3, marker="o", markersize=3, alpha=0.9)
+    fig.patch.set_facecolor("none")
+    ax.set_facecolor("none")
+
+    text_c = "#e5e7eb"
+    grid_c = (1, 1, 1, 0.12)
+
+    ax.plot(
+        index, mean,
+        label="Predicción",
+        linewidth=2.6,
+        color=color,
+        zorder=3,
+        marker="o",
+        markersize=3,
+        alpha=0.95,
+    )
 
     if low is not None and up is not None:
         ax.fill_between(index, low, up, alpha=0.18, color=color, label="IC 95%", zorder=2)
 
-    ax.set_title(title, fontsize=16, fontweight="bold", pad=18, color="#0f172a")
-    ax.set_xlabel("Fecha", fontsize=12, fontweight="700", color="#334155")
-    ax.set_ylabel("Volumen (HL)", fontsize=12, fontweight="700", color="#334155")
-    ax.grid(True, alpha=0.30, linestyle="--", linewidth=0.6)
-    ax.legend(loc="best", frameon=True, shadow=True, fontsize=10)
+    ax.set_title(title, fontsize=16, fontweight="bold", pad=18, color=text_c)
+    ax.set_xlabel("Fecha", fontsize=12, fontweight="700", color=text_c)
+    ax.set_ylabel("Volumen (HL)", fontsize=12, fontweight="700", color=text_c)
+
+    ax.tick_params(colors=text_c)
+    for spine in ax.spines.values():
+        spine.set_alpha(0.25)
+        spine.set_color(text_c)
+
+    ax.grid(True, alpha=0.30, linestyle="--", linewidth=0.6, color=grid_c)
+    leg = ax.legend(loc="best", frameon=True, fontsize=10)
+    leg.get_frame().set_alpha(0.20)
+
     plt.xticks(rotation=45)
     plt.tight_layout()
     return fig
 
 
 # Header
-
 st.markdown('<h1 class="main-title">📈 Forecast de Ventas 2025</h1>', unsafe_allow_html=True)
 st.markdown('<div class="main-subtitle">Comparación Prophet vs SARIMAX | Cochabamba, Bolivia</div>', unsafe_allow_html=True)
 
 # Sidebar
-
 with st.sidebar:
     st.markdown("### ⚙️ Configuración")
     st.markdown("---")
@@ -287,7 +394,6 @@ mask_range = (dates_2025 >= pd.to_datetime(start_date)) & (dates_2025 <= pd.to_d
 dates_view = dates_2025[mask_range]
 
 # Load & Predict (desde repo)
-
 with st.spinner("🔄 Cargando modelos desde el repo..."):
     # Validación existencia
     if not os.path.exists(PROPHET_PATH):
@@ -407,18 +513,24 @@ with tab1:
     df_mean = pd.DataFrame({"Prophet": p_view.loc[idx_common], "SARIMAX": s_view.loc[idx_common]}, index=idx_common)
 
     fig, ax = plt.subplots(figsize=(16, 7))
-    ax.set_facecolor("#f8fafc")
-    fig.patch.set_facecolor("white")
+    fig.patch.set_facecolor("none")
+    ax.set_facecolor("none")
+
+    text_c = "#e5e7eb"
+    ax.tick_params(colors=text_c)
+    for spine in ax.spines.values():
+        spine.set_alpha(0.25)
+        spine.set_color(text_c)
 
     ax.plot(df_mean.index, df_mean["Prophet"], label="Prophet", linewidth=3, color="#10b981", marker="o", markersize=4)
     ax.plot(df_mean.index, df_mean["SARIMAX"], label="SARIMAX", linewidth=3, color="#f59e0b", marker="s", markersize=4)
     ax.fill_between(df_mean.index, df_mean["Prophet"], df_mean["SARIMAX"], alpha=0.12, color="#3b82f6")
 
-    ax.set_title("Comparación 2025", fontsize=18, fontweight="bold", pad=18, color="#0f172a")
-    ax.set_xlabel("Fecha", fontsize=13, color="#334155")
-    ax.set_ylabel("Volumen (HL)", fontsize=13, color="#334155")
-    ax.grid(True, alpha=0.30)
-    ax.legend(loc="best", frameon=True, shadow=True, fontsize=12)
+    ax.set_title("Comparación 2025", fontsize=18, fontweight="bold", pad=18, color=text_c)
+    ax.set_xlabel("Fecha", fontsize=13, color=text_c)
+    ax.set_ylabel("Volumen (HL)", fontsize=13, color=text_c)
+    ax.grid(True, alpha=0.25, color=(1, 1, 1, 0.12))
+    ax.legend(loc="best", frameon=True, shadow=False, fontsize=12)
     plt.xticks(rotation=45)
     plt.tight_layout()
     st.pyplot(fig)
@@ -442,24 +554,31 @@ with tab2:
     st.markdown("---")
 
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(16, 10))
-    fig.patch.set_facecolor("white")
+    fig.patch.set_facecolor("none")
+    ax1.set_facecolor("none")
+    ax2.set_facecolor("none")
 
-    ax1.set_facecolor("#f8fafc")
+    text_c = "#e5e7eb"
+    for ax in (ax1, ax2):
+        ax.tick_params(colors=text_c)
+        for spine in ax.spines.values():
+            spine.set_alpha(0.25)
+            spine.set_color(text_c)
+
     ax1.plot(df_compare.index, df_compare["Prophet"], label="Prophet", linewidth=2.5, color="#10b981", marker="o", markersize=3)
     ax1.plot(df_compare.index, df_compare["SARIMAX"], label="SARIMAX", linewidth=2.5, color="#f59e0b", marker="s", markersize=3)
-    ax1.set_title("Comparación en Rango", fontsize=16, fontweight="bold", color="#0f172a")
-    ax1.set_ylabel("Volumen (HL)", fontsize=12, color="#334155")
-    ax1.grid(True, alpha=0.30)
+    ax1.set_title("Comparación en Rango", fontsize=16, fontweight="bold", color=text_c)
+    ax1.set_ylabel("Volumen (HL)", fontsize=12, color=text_c)
+    ax1.grid(True, alpha=0.25, color=(1, 1, 1, 0.12))
     ax1.legend()
 
-    ax2.set_facecolor("#f8fafc")
     colors = np.where(df_compare["Diff"] >= 0, "#10b981", "#ef4444")
     ax2.bar(df_compare.index, df_compare["Diff"], color=colors, alpha=0.70)
-    ax2.axhline(y=0, color="#64748b", linestyle="--")
-    ax2.set_title("Diferencias (Prophet - SARIMAX)", fontsize=16, fontweight="bold", color="#0f172a")
-    ax2.set_xlabel("Fecha", fontsize=12, color="#334155")
-    ax2.set_ylabel("Diferencia (HL)", fontsize=12, color="#334155")
-    ax2.grid(True, alpha=0.30, axis="y")
+    ax2.axhline(y=0, color="#94a3b8", linestyle="--")
+    ax2.set_title("Diferencias (Prophet - SARIMAX)", fontsize=16, fontweight="bold", color=text_c)
+    ax2.set_xlabel("Fecha", fontsize=12, color=text_c)
+    ax2.set_ylabel("Diferencia (HL)", fontsize=12, color=text_c)
+    ax2.grid(True, alpha=0.25, axis="y", color=(1, 1, 1, 0.12))
 
     plt.xticks(rotation=45)
     plt.tight_layout()
@@ -546,31 +665,44 @@ with tab4:
     with col1:
         st.markdown("#### 📊 Distribución")
         fig, ax = plt.subplots(figsize=(10, 6))
-        ax.set_facecolor("#f8fafc")
-        fig.patch.set_facecolor("white")
+        fig.patch.set_facecolor("none")
+        ax.set_facecolor("none")
+
+        text_c = "#e5e7eb"
+        ax.tick_params(colors=text_c)
+        for spine in ax.spines.values():
+            spine.set_alpha(0.25)
+            spine.set_color(text_c)
+
         ax.hist(p[p > 0], bins=30, alpha=0.60, color="#10b981", label="Prophet")
         ax.hist(s[s > 0], bins=30, alpha=0.60, color="#f59e0b", label="SARIMAX")
-        ax.set_title("Distribución de Volúmenes", fontsize=14, fontweight="bold", color="#0f172a")
-        ax.set_xlabel("Volumen (HL)", color="#334155")
-        ax.set_ylabel("Frecuencia", color="#334155")
+        ax.set_title("Distribución de Volúmenes", fontsize=14, fontweight="bold", color=text_c)
+        ax.set_xlabel("Volumen (HL)", color=text_c)
+        ax.set_ylabel("Frecuencia", color=text_c)
         ax.legend()
-        ax.grid(True, alpha=0.30, axis="y")
+        ax.grid(True, alpha=0.25, axis="y", color=(1, 1, 1, 0.12))
         plt.tight_layout()
         st.pyplot(fig)
 
     with col2:
         st.markdown("#### 📈 Correlación")
         fig, ax = plt.subplots(figsize=(10, 6))
-        ax.set_facecolor("#f8fafc")
-        fig.patch.set_facecolor("white")
+        fig.patch.set_facecolor("none")
+        ax.set_facecolor("none")
+
+        text_c = "#e5e7eb"
+        ax.tick_params(colors=text_c)
+        for spine in ax.spines.values():
+            spine.set_alpha(0.25)
+            spine.set_color(text_c)
 
         ax.scatter(p.values, s.values, alpha=0.45, c=pd.to_datetime(p.index).dayofyear, cmap="viridis", s=46)
         max_val = float(max(p.max(), s.max()))
-        ax.plot([0, max_val], [0, max_val], linestyle="--", linewidth=2, alpha=0.7, color="#ef4444")
-        ax.set_title("Prophet vs SARIMAX", fontsize=14, fontweight="bold", color="#0f172a")
-        ax.set_xlabel("Prophet (HL)", color="#334155")
-        ax.set_ylabel("SARIMAX (HL)", color="#334155")
-        ax.grid(True, alpha=0.30)
+        ax.plot([0, max_val], [0, max_val], linestyle="--", linewidth=2, alpha=0.6, color="#94a3b8")
+        ax.set_title("Prophet vs SARIMAX", fontsize=14, fontweight="bold", color=text_c)
+        ax.set_xlabel("Prophet (HL)", color=text_c)
+        ax.set_ylabel("SARIMAX (HL)", color=text_c)
+        ax.grid(True, alpha=0.25, color=(1, 1, 1, 0.12))
         plt.tight_layout()
         st.pyplot(fig)
 
@@ -580,7 +712,7 @@ with tab4:
 st.markdown("<hr/>", unsafe_allow_html=True)
 st.markdown(
     """
-<div style='text-align: center; color: #64748b; padding: 1.6rem;'>
+<div style='text-align: center; color: #94a3b8; padding: 1.6rem;'>
   <strong>Forecast de Ventas 2025</strong> | Cochabamba, Bolivia
 </div>
 """,
