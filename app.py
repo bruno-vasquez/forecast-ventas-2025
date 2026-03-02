@@ -1,5 +1,6 @@
 import os
 import io
+import tempfile
 from datetime import timedelta
 
 import streamlit as st
@@ -14,11 +15,6 @@ import gdown
 # =============================================================================
 DRIVE_FILE_ID = "1xxvsoHcjpkG6uvPfFq82EZNbr2MlOWLI"
 
-# En Streamlit Cloud existe /tmp. En Windows local no existe.
-# Usamos temp dir portable (Windows/Linux) y si estamos en Streamlit Cloud lo mandamos a /tmp.
-DEFAULT_TMP = os.getenv("TMPDIR") or os.getenv("TEMP") or os.getenv("TMP") or "/tmp"
-CLOUD_TMP = "/tmp" if os.path.isdir("/tmp") else DEFAULT_TMP
-import tempfile
 TMP_DIR = tempfile.gettempdir()
 CSV_LOCAL_PATH = os.path.join(TMP_DIR, "CBN_Cochabamba_2024_LIMPIO.csv")
 
@@ -227,23 +223,47 @@ p,span,div,label { color: var(--text-primary); }
 )
 
 # =============================================================================
+# HELPERS: compat Streamlit "width" vs "use_container_width"
+# =============================================================================
+def df_show(obj, **kwargs):
+    """st.dataframe compat: width='stretch' (nuevo) o use_container_width=True (viejo)."""
+    try:
+        return st.dataframe(obj, width="stretch", **kwargs)
+    except TypeError:
+        return st.dataframe(obj, use_container_width=True, **kwargs)
+
+def btn_download(label, data, file_name, mime, **kwargs):
+    """st.download_button compat."""
+    try:
+        return st.download_button(label, data, file_name=file_name, mime=mime, width="stretch", **kwargs)
+    except TypeError:
+        return st.download_button(label, data, file_name=file_name, mime=mime, use_container_width=True, **kwargs)
+
+def show_pyplot(fig):
+    """st.pyplot compat."""
+    try:
+        st.pyplot(fig, width="stretch")
+    except TypeError:
+        st.pyplot(fig, use_container_width=True)
+    finally:
+        plt.close(fig)
+
+# =============================================================================
 # FUNCIONES DRIVE + LECTURA CSV
 # =============================================================================
 @st.cache_data(show_spinner=False)
 def ensure_csv_from_drive(file_id: str, local_path: str) -> str:
-    # crea el directorio si hace falta
     os.makedirs(os.path.dirname(local_path), exist_ok=True)
-
     if os.path.exists(local_path) and os.path.getsize(local_path) > 0:
         return local_path
 
     url = f"https://drive.google.com/uc?id={file_id}"
     ok = gdown.download(url, local_path, quiet=True)
 
-    if not ok or (not os.path.exists(local_path)) or os.path.getsize(local_path) == 0:
+    if (not ok) or (not os.path.exists(local_path)) or os.path.getsize(local_path) == 0:
         raise FileNotFoundError(
             "No se pudo descargar el CSV desde Google Drive. "
-            "Verifica que el archivo esté en modo público o compartido 'cualquiera con el enlace'."
+            "Asegúrate que esté compartido como: 'cualquiera con el enlace'."
         )
     return local_path
 
@@ -266,11 +286,22 @@ PROPHET_PATH = os.path.join(MODELS_DIR, "prophet_model.joblib")
 SARIMAX_PATH = os.path.join(MODELS_DIR, "sarimax_model.joblib")
 
 # =============================================================================
-# COLUMNAS DEL CSV (AJUSTA SI CAMBIA)
+# COLUMNAS DEL CSV (AUTO-DETECCIÓN CON TUS NOMBRES REALES)
 # =============================================================================
-COL_FECHA = "FECHA_CIERRE"          # o "FECHA_SALIDA" si tu lógica usa salida
-COL_PRODUCTO = "PRODUCTO"
-COL_VOL = "VOLUMEN_VENDIDO_NETA"
+# Tus columnas reales incluyen FECHA_CIERRE / FECHA_SALIDA / PRODUCTO / VOLUMEN_VENDIDO_NETA
+DATE_CANDIDATES = ["FECHA_CIERRE", "FECHA_SALIDA", "FECHA"]
+PROD_CANDIDATES = ["PRODUCTO", "PRODUCTO "]
+VOL_CANDIDATES  = ["VOLUMEN_VENDIDO_NETA", "HL", "VOLUMEN_HL", "VENTA_HL"]
+
+def pick_existing(df: pd.DataFrame, candidates: list[str], label: str) -> str:
+    cols = set(df.columns)
+    for c in candidates:
+        if c in cols:
+            return c
+    st.error(f"❌ No encontré columna para **{label}**. Probé: {candidates}")
+    st.write("📌 Columnas detectadas en tu CSV:")
+    st.write(list(df.columns))
+    st.stop()
 
 # =============================================================================
 # FERIADOS 2025
@@ -377,6 +408,7 @@ def build_mix_producto_2024(df: pd.DataFrame, col_fecha: str, col_producto: str,
 
     dfx[col_producto] = dfx[col_producto].astype(str).str.strip()
     dfx = dfx[dfx[col_producto] != ""]
+
     dfx[col_vol] = pd.to_numeric(dfx[col_vol], errors="coerce").fillna(0)
 
     dfy = dfx[dfx[col_fecha].dt.year == year].copy()
@@ -413,7 +445,7 @@ def plot_top_bars_dark(df_top: pd.DataFrame, x_col: str, y_col: str, title: str,
         ax.text(v + pad, i, f"{v:,.0f}", va="center", ha="left", color=fg, fontsize=10, fontweight="700")
 
     plt.tight_layout()
-    st.pyplot(fig, width=True)
+    show_pyplot(fig)
 
 # =============================================================================
 # HEADER
@@ -461,6 +493,12 @@ try:
 except Exception as e:
     st.error(f"No pude descargar/leer el CSV desde Drive: {e}")
     df_base = None
+
+# Resolver columnas reales del CSV (IMPORTANTÍSIMO para evitar KeyError FECHA)
+if df_base is not None:
+    COL_FECHA = pick_existing(df_base, DATE_CANDIDATES, "Fecha")
+    COL_PRODUCTO = pick_existing(df_base, PROD_CANDIDATES, "Producto")
+    COL_VOL = pick_existing(df_base, VOL_CANDIDATES, "Volumen")
 
 # =============================================================================
 # LOAD & PREDICT
@@ -512,6 +550,7 @@ with st.spinner("🔄 Cargando modelos desde el repositorio…"):
     low_s = pd.Series(np.asarray(ci_s.iloc[:, 0]), index=dates_2025)
     up_s = pd.Series(np.asarray(ci_s.iloc[:, 1]), index=dates_2025)
 
+    # Ceros operativos
     pred_prophet = apply_operational_zeros(pred_prophet, FERIADOS_2025)
     pred_sarimax = apply_operational_zeros(pred_sarimax, FERIADOS_2025)
     low_p = apply_operational_zeros(low_p, FERIADOS_2025)
@@ -519,6 +558,7 @@ with st.spinner("🔄 Cargando modelos desde el repositorio…"):
     low_s = apply_operational_zeros(low_s, FERIADOS_2025)
     up_s = apply_operational_zeros(up_s, FERIADOS_2025)
 
+    # Vistas
     p_view = resample_view(pred_prophet, vista)
     s_view = resample_view(pred_sarimax, vista)
     lp_view = resample_view(low_p, vista)
@@ -532,7 +572,7 @@ with st.spinner("🔄 Cargando modelos desde el repositorio…"):
         ls_view, us_view = ls_view.cumsum(), us_view.cumsum()
 
 # =============================================================================
-# SIDEBAR: TOP PRODUCTOS (AHORA SÍ, DESPUÉS DE pred_prophet)
+# SIDEBAR: TOP PRODUCTOS (AHORA SÍ, DESPUÉS DE pred_prophet) + FIX value repetido
 # =============================================================================
 with st.sidebar:
     st.markdown("---")
@@ -547,11 +587,11 @@ with st.sidebar:
     )
 
     total_2025_manual = st.number_input(
-    "Total 2025 manual (HL)",
-    min_value=0.0,
-    value=float(pred_prophet.sum()),
-    step=1000.0
-)
+        "Total 2025 manual (HL)",
+        min_value=0.0,
+        value=float(pred_prophet.sum()),
+        step=1000.0
+    )
 
 # =============================================================================
 # TABS
@@ -634,7 +674,7 @@ with tab1:
 
     plt.xticks(rotation=40)
     plt.tight_layout()
-    st.pyplot(fig)
+    show_pyplot(fig)
 
 # ── TAB 2: COMPARACIÓN
 with tab2:
@@ -687,26 +727,26 @@ with tab2:
     plt.xticks(rotation=40)
     fig.subplots_adjust(hspace=0.38)
     plt.tight_layout()
-    st.pyplot(fig)
+    show_pyplot(fig)
 
     st.markdown("---")
     st.markdown("#### 📅 Resumen Mensual")
     mensual = df_compare.resample("MS").sum()
-    st.dataframe(mensual.style.format("{:,.0f}"), width="stretch")
+    df_show(mensual.style.format("{:,.0f}"))
 
     st.markdown("---")
     col1, col2 = st.columns(2)
 
     with col1:
         csv = df_compare.reset_index().rename(columns={"index": "fecha"}).to_csv(index=False).encode("utf-8")
-        st.download_button("📄 Descargar CSV", csv, "forecast_2025.csv", "text/csv", width="stretch")
+        btn_download("📄 Descargar CSV", csv, "forecast_2025.csv", "text/csv")
 
     with col2:
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine="openpyxl") as writer:
             df_compare.reset_index().rename(columns={"index": "fecha"}).to_excel(writer, sheet_name="Diario", index=False)
             mensual.reset_index().rename(columns={"index": "mes"}).to_excel(writer, sheet_name="Mensual", index=False)
-        st.download_button("📊 Descargar Excel", output.getvalue(), "forecast_2025.xlsx", width="stretch")
+        btn_download("📊 Descargar Excel", output.getvalue(), "forecast_2025.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 # ── TAB 3: DETALLE
 with tab3:
@@ -727,7 +767,7 @@ with tab3:
                                f"Prophet — Vista {vista}", color="#00c07a")
         else:
             fig = plot_with_ci(p_view.index, p_view.values, title=f"Prophet — Vista {vista}", color="#00c07a")
-        st.pyplot(fig)
+        show_pyplot(fig)
         st.markdown("</div>", unsafe_allow_html=True)
 
     with colB:
@@ -743,17 +783,18 @@ with tab3:
                                f"SARIMAX — Vista {vista}", color="#f5a623")
         else:
             fig = plot_with_ci(s_view.index, s_view.values, title=f"SARIMAX — Vista {vista}", color="#f5a623")
-        st.pyplot(fig)
+        show_pyplot(fig)
         st.markdown("</div>", unsafe_allow_html=True)
 
-# ── TAB 4: ESTADÍSTICAS
+# ── TAB 4: ESTADÍSTICAS + MIX PRODUCTOS
 with tab4:
     st.markdown('<h2 class="subtitle">Análisis Estadístico</h2>', unsafe_allow_html=True)
     st.markdown('<h2 class="subtitle">Top productos 2024 (real) y 2025 (estimado por mix 2024)</h2>', unsafe_allow_html=True)
 
-if df_base is None:
-    st.warning("No se pudo cargar el CSV base desde Drive. Revisa permisos/enlace.")
-else:
+    if df_base is None:
+        st.warning("No se pudo cargar el CSV base desde Drive. Revisa permisos/enlace.")
+        st.stop()
+
     total_2025_prophet = float(pred_prophet.sum())
     total_2025_sarimax = float(pred_sarimax.sum())
 
@@ -781,7 +822,7 @@ else:
 
     st.markdown("<hr/>", unsafe_allow_html=True)
 
-    # mezcla 2024
+    # Mezcla 2024 (usa tus columnas reales auto-detectadas)
     mix_2024, total_2024 = build_mix_producto_2024(df_base, COL_FECHA, COL_PRODUCTO, COL_VOL, year=2024)
     fc_2025 = forecast_by_mix(mix_2024, TOTAL_2025_FORECAST)
 
@@ -792,10 +833,9 @@ else:
         st.markdown("#### 📌 Top productos 2024 (real)")
         st.caption(f"Total 2024 (HL): {total_2024:,.0f}")
         top_2024 = mix_2024.head(top_n).copy()
-        st.dataframe(
+        df_show(
             top_2024[["PRODUCTO", "VENTA_2024_HL", "PARTICIPACION_%"]]
-            .style.format({"VENTA_2024_HL": "{:,.2f}", "PARTICIPACION_%": "{:.4%}"}),
-            width="stretch"
+            .style.format({"VENTA_2024_HL": "{:,.2f}", "PARTICIPACION_%": "{:.4%}"})
         )
         st.markdown("</div>", unsafe_allow_html=True)
 
@@ -808,10 +848,9 @@ else:
         st.markdown('<div class="custom-card">', unsafe_allow_html=True)
         st.markdown("#### 📌 Top productos 2025 (estimado por mix 2024)")
         top_2025 = fc_2025.head(top_n).copy()
-        st.dataframe(
+        df_show(
             top_2025[["PRODUCTO", "PARTICIPACION_%", "VENTA_2025_EST_HL"]]
-            .style.format({"PARTICIPACION_%": "{:.4%}", "VENTA_2025_EST_HL": "{:,.2f}"}),
-            width="stretch"
+            .style.format({"PARTICIPACION_%": "{:.4%}", "VENTA_2025_EST_HL": "{:,.2f}"})
         )
         st.markdown("</div>", unsafe_allow_html=True)
 
@@ -831,7 +870,7 @@ else:
         "Prophet": [p.mean(), p.median(), p.std(), p.min(), p.max(), p.quantile(0.25), p.quantile(0.75)],
         "SARIMAX": [s.mean(), s.median(), s.std(), s.min(), s.max(), s.quantile(0.25), s.quantile(0.75)],
     })
-    st.dataframe(stats_df.style.format({"Prophet": "{:.2f}", "SARIMAX": "{:.2f}"}), width="stretch")
+    df_show(stats_df.style.format({"Prophet": "{:.2f}", "SARIMAX": "{:.2f}"}))
 
     st.markdown("---")
     col1, col2 = st.columns(2)
@@ -859,7 +898,7 @@ else:
         for t in leg.get_texts():
             t.set_color(FG)
         plt.tight_layout()
-        st.pyplot(fig)
+        show_pyplot(fig)
 
     with col2:
         st.markdown("#### 📈 Correlación entre Modelos")
@@ -888,7 +927,7 @@ else:
         cb.set_label("Día del año", color=FG, fontsize=10)
 
         plt.tight_layout()
-        st.pyplot(fig)
+        show_pyplot(fig)
 
     correlation = p.corr(s)
     st.info(f"📊 **Correlación Pearson entre modelos:** `{correlation:.4f}`")
