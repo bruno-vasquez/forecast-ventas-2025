@@ -754,6 +754,7 @@ with tab3:
     with colB:
         st.markdown('<div class="custom-card">', unsafe_allow_html=True)
         st.markdown("### 🟠 SARIMAX")
+        st.markdown('<span class="badge badge-sarimax">Estadístico</span>', unsafe_allow_html=True)
         c1, c2 = st.columns(2)
         c1.metric("Total", f"{pred_sarimax.sum():,.0f} HL")
         c2.metric("Promedio", f"{pred_sarimax.mean():,.1f} HL")
@@ -846,7 +847,7 @@ st.markdown(
     """
 <div class="app-footer">
   <strong>Forecast de Ventas 2025</strong> &nbsp;·&nbsp; Cochabamba, Bolivia
-</div>s
+</div>
 """,
     unsafe_allow_html=True,
 )
