@@ -29,7 +29,7 @@ st.set_page_config(
 )
 
 # =============================================================================
-# ESTILOS (TU CSS TAL CUAL)
+# ESTILOS 
 # =============================================================================
 st.markdown(
     """
@@ -286,7 +286,7 @@ PROPHET_PATH = os.path.join(MODELS_DIR, "prophet_model.joblib")
 SARIMAX_PATH = os.path.join(MODELS_DIR, "sarimax_model.joblib")
 
 # =============================================================================
-# COLUMNAS DEL CSV (AUTO-DETECCIÓN CON TUS NOMBRES REALES)
+# COLUMNAS DEL CSV 
 # =============================================================================
 # Tus columnas reales incluyen FECHA_CIERRE / FECHA_SALIDA / PRODUCTO / VOLUMEN_VENDIDO_NETA
 DATE_CANDIDATES = ["FECHA_CIERRE", "FECHA_SALIDA", "FECHA"]
@@ -729,25 +729,6 @@ with tab2:
     plt.tight_layout()
     show_pyplot(fig)
 
-    st.markdown("---")
-    st.markdown("#### 📅 Resumen Mensual")
-    mensual = df_compare.resample("MS").sum()
-    df_show(mensual.style.format("{:,.0f}"))
-
-    st.markdown("---")
-    col1, col2 = st.columns(2)
-
-    with col1:
-        csv = df_compare.reset_index().rename(columns={"index": "fecha"}).to_csv(index=False).encode("utf-8")
-        btn_download("📄 Descargar CSV", csv, "forecast_2025.csv", "text/csv")
-
-    with col2:
-        output = io.BytesIO()
-        with pd.ExcelWriter(output, engine="openpyxl") as writer:
-            df_compare.reset_index().rename(columns={"index": "fecha"}).to_excel(writer, sheet_name="Diario", index=False)
-            mensual.reset_index().rename(columns={"index": "mes"}).to_excel(writer, sheet_name="Mensual", index=False)
-        btn_download("📊 Descargar Excel", output.getvalue(), "forecast_2025.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-
 # ── TAB 3: DETALLE
 with tab3:
     st.markdown('<h2 class="subtitle">Detalle por Modelo</h2>', unsafe_allow_html=True)
@@ -872,66 +853,6 @@ with tab4:
     })
     df_show(stats_df.style.format({"Prophet": "{:.2f}", "SARIMAX": "{:.2f}"}))
 
-    st.markdown("---")
-    col1, col2 = st.columns(2)
-
-    FG = "#c8d0f0"
-    CHART_BG = "#0e1428"
-
-    with col1:
-        st.markdown("#### 📊 Distribución de Volúmenes")
-        fig, ax = plt.subplots(figsize=(10, 5.5))
-        fig.patch.set_facecolor(CHART_BG)
-        ax.set_facecolor(CHART_BG)
-        ax.tick_params(colors=FG, labelsize=10)
-        for spine in ax.spines.values():
-            spine.set_alpha(0.25)
-            spine.set_color((0.38, 0.42, 0.68, 0.30))
-        ax.grid(True, alpha=0.28, axis="y", linestyle="--", linewidth=0.6, color=(0.38, 0.42, 0.68, 0.18))
-
-        ax.hist(p[p > 0], bins=30, alpha=0.65, color="#00c07a", label="Prophet", edgecolor="#0e1428", linewidth=0.5)
-        ax.hist(s[s > 0], bins=30, alpha=0.65, color="#f5a623", label="SARIMAX", edgecolor="#0e1428", linewidth=0.5)
-        ax.set_title("Distribución de Volúmenes (días activos)", fontsize=13, fontweight="800", color="#e8ecff", pad=12)
-        ax.set_xlabel("Volumen (HL)", fontsize=11, fontweight="600", color=FG)
-        ax.set_ylabel("Frecuencia", fontsize=11, fontweight="600", color=FG)
-        leg = ax.legend(loc="best", frameon=True, fontsize=10, facecolor="#1a2040", edgecolor="none")
-        for t in leg.get_texts():
-            t.set_color(FG)
-        plt.tight_layout()
-        show_pyplot(fig)
-
-    with col2:
-        st.markdown("#### 📈 Correlación entre Modelos")
-        fig, ax = plt.subplots(figsize=(10, 5.5))
-        fig.patch.set_facecolor(CHART_BG)
-        ax.set_facecolor(CHART_BG)
-        ax.tick_params(colors=FG, labelsize=10)
-        for spine in ax.spines.values():
-            spine.set_alpha(0.25)
-            spine.set_color((0.38, 0.42, 0.68, 0.30))
-        ax.grid(True, alpha=0.25, linestyle="--", linewidth=0.6, color=(0.38, 0.42, 0.68, 0.18))
-
-        sc = ax.scatter(p.values, s.values, alpha=0.45,
-                        c=pd.to_datetime(p.index).dayofyear, cmap="plasma", s=46, zorder=3)
-        max_val = float(max(p.max(), s.max()))
-        ax.plot([0, max_val], [0, max_val], linestyle="--", linewidth=1.8, alpha=0.55, color="#5c6899")
-
-        ax.set_title("Prophet vs SARIMAX — Scatter", fontsize=13, fontweight="800", color="#e8ecff", pad=12)
-        ax.set_xlabel("Prophet (HL)", fontsize=11, fontweight="600", color=FG)
-        ax.set_ylabel("SARIMAX (HL)", fontsize=11, fontweight="600", color=FG)
-
-        cb = fig.colorbar(sc, ax=ax)
-        cb.ax.yaxis.set_tick_params(color=FG, labelsize=9)
-        cb.outline.set_edgecolor("none")
-        plt.setp(cb.ax.yaxis.get_ticklabels(), color=FG)
-        cb.set_label("Día del año", color=FG, fontsize=10)
-
-        plt.tight_layout()
-        show_pyplot(fig)
-
-    correlation = p.corr(s)
-    st.info(f"📊 **Correlación Pearson entre modelos:** `{correlation:.4f}`")
-
 # =============================================================================
 # FOOTER
 # =============================================================================
@@ -939,7 +860,7 @@ st.markdown(
     """
 <div class="app-footer">
   <strong>Forecast de Ventas 2025</strong> &nbsp;·&nbsp; Cochabamba, Bolivia
-</div>
+</div>s
 """,
     unsafe_allow_html=True,
 )
