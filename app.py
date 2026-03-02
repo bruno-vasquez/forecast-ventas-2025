@@ -268,9 +268,9 @@ SARIMAX_PATH = os.path.join(MODELS_DIR, "sarimax_model.joblib")
 # =============================================================================
 # COLUMNAS DEL CSV (AJUSTA SI CAMBIA)
 # =============================================================================
-COL_FECHA = "FECHA"        # o "Fecha"
-COL_PRODUCTO = "PRODUCTO"  # o "Producto"
-COL_VOL = "HL"             # o "VOLUMEN_HL"
+COL_FECHA = "FECHA_CIERRE"          # o "FECHA_SALIDA" si tu lógica usa salida
+COL_PRODUCTO = "PRODUCTO"
+COL_VOL = "VOLUMEN_VENDIDO_NETA"
 
 # =============================================================================
 # FERIADOS 2025
