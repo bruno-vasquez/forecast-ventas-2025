@@ -7,38 +7,22 @@ import pandas as pd
 import numpy as np
 import joblib
 import matplotlib.pyplot as plt
-import matplotlib as mpl
 import gdown
 
+# =============================================================================
+# CONFIG DATA SOURCE (CSV EN GOOGLE DRIVE)
+# =============================================================================
 DRIVE_FILE_ID = "1xxvsoHcjpkG6uvPfFq82EZNbr2MlOWLI"
-CSV_LOCAL_PATH = os.path.join("/tmp", "CBN_Cochabamba_2024_LIMPIO.csv")
 
-@st.cache_data(show_spinner=False)
-def ensure_csv_from_drive(file_id: str, local_path: str) -> str:
-    """
-    Descarga el CSV desde Google Drive a un path local (Streamlit Cloud),
-    y devuelve el path local. Cacheado para no descargar en cada rerun.
-    """
-    if os.path.exists(local_path) and os.path.getsize(local_path) > 0:
-        return local_path
+# En Streamlit Cloud existe /tmp. En Windows local no existe.
+# Usamos temp dir portable (Windows/Linux) y si estamos en Streamlit Cloud lo mandamos a /tmp.
+DEFAULT_TMP = os.getenv("TMPDIR") or os.getenv("TEMP") or os.getenv("TMP") or "/tmp"
+CLOUD_TMP = "/tmp" if os.path.isdir("/tmp") else DEFAULT_TMP
+CSV_LOCAL_PATH = os.path.join(CLOUD_TMP, "CBN_Cochabamba_2024_LIMPIO.csv")
 
-    url = f"https://drive.google.com/uc?id={file_id}"
-    # quiet=False para logs en consola; en Streamlit mantenlo True para no ensuciar UI
-    gdown.download(url, local_path, quiet=True)
-    return local_path
-
-@st.cache_data(show_spinner=False)
-def load_base_csv_from_drive(file_id: str) -> pd.DataFrame:
-    path = ensure_csv_from_drive(file_id, CSV_LOCAL_PATH)
-    # Intenta normal, si falla intenta ; (por si acaso)
-    try:
-        df = pd.read_csv(path)
-    except Exception:
-        df = pd.read_csv(path, sep=";")
-    df.columns = [c.strip() for c in df.columns]
-    return df
-
-# Config
+# =============================================================================
+# STREAMLIT PAGE
+# =============================================================================
 st.set_page_config(
     page_title="Forecast Ventas 2025 - Cochabamba",
     page_icon="📈",
@@ -46,94 +30,50 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# =========================
-# ESTILOS DUAL-MODE
-# =========================
+# =============================================================================
+# ESTILOS (TU CSS TAL CUAL)
+# =============================================================================
 st.markdown(
     """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700;800&family=DM+Mono:wght@400;500&display=swap');
 
-*, html, body, [class*="css"] {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-}
+*, html, body, [class*="css"] { font-family: 'Plus Jakarta Sans', sans-serif; }
 
-/* ─────────────────────────────────────────
-   LIGHT MODE TOKENS
-───────────────────────────────────────── */
+/* LIGHT MODE TOKENS */
 :root {
-  --bg-base:      #f0f4ff;
-  --bg-card:      #ffffff;
-  --bg-card2:     #f8faff;
-  --bg-sidebar:   #1a1f3a;
-
-  --text-primary:  #0d1333;
-  --text-secondary:#3d4575;
-  --text-muted:    #7c85b3;
-  --text-on-dark:  #e8ecff;
-
-  --border-light:  rgba(99,120,255,0.14);
-  --border-card:   rgba(99,120,255,0.20);
-  --shadow-card:   0 4px 24px rgba(30,50,180,0.08), 0 1px 4px rgba(30,50,180,0.06);
-  --shadow-hover:  0 12px 36px rgba(30,50,180,0.16);
-
-  --accent-blue:   #3d5cff;
-  --accent-cyan:   #00c9e0;
-  --accent-green:  #00c07a;
-  --accent-amber:  #f5a623;
-  --accent-red:    #f04b4b;
-
-  --gradient-hero: linear-gradient(135deg, #3d5cff 0%, #00c9e0 100%);
-  --gradient-card: linear-gradient(135deg, rgba(61,92,255,0.07) 0%, rgba(0,201,224,0.05) 100%);
-  --gradient-btn:  linear-gradient(135deg, #3d5cff 0%, #00c9e0 100%);
-  --gradient-dl:   linear-gradient(135deg, #00c07a 0%, #00a868 100%);
-
-  --tab-bg:        rgba(255,255,255,0.85);
-  --tab-inactive:  #eef1ff;
-  --tab-active-bg: linear-gradient(135deg, rgba(61,92,255,0.12) 0%, rgba(0,201,224,0.10) 100%);
-  --tab-active-border: rgba(61,92,255,0.35);
-
-  --chart-bg:      #ffffff;
-  --chart-text:    #0d1333;
-  --chart-grid:    rgba(61,92,255,0.10);
-  --chart-spine:   rgba(61,92,255,0.20);
+  --bg-base:#f0f4ff; --bg-card:#ffffff; --bg-card2:#f8faff; --bg-sidebar:#1a1f3a;
+  --text-primary:#0d1333; --text-secondary:#3d4575; --text-muted:#7c85b3; --text-on-dark:#e8ecff;
+  --border-light:rgba(99,120,255,0.14); --border-card:rgba(99,120,255,0.20);
+  --shadow-card:0 4px 24px rgba(30,50,180,0.08), 0 1px 4px rgba(30,50,180,0.06);
+  --shadow-hover:0 12px 36px rgba(30,50,180,0.16);
+  --accent-blue:#3d5cff; --accent-cyan:#00c9e0; --accent-green:#00c07a; --accent-amber:#f5a623; --accent-red:#f04b4b;
+  --gradient-hero:linear-gradient(135deg,#3d5cff 0%,#00c9e0 100%);
+  --gradient-card:linear-gradient(135deg,rgba(61,92,255,0.07) 0%,rgba(0,201,224,0.05) 100%);
+  --gradient-btn:linear-gradient(135deg,#3d5cff 0%,#00c9e0 100%);
+  --gradient-dl:linear-gradient(135deg,#00c07a 0%,#00a868 100%);
+  --tab-bg:rgba(255,255,255,0.85); --tab-inactive:#eef1ff;
+  --tab-active-bg:linear-gradient(135deg,rgba(61,92,255,0.12) 0%,rgba(0,201,224,0.10) 100%);
+  --tab-active-border:rgba(61,92,255,0.35);
+  --chart-bg:#ffffff; --chart-text:#0d1333; --chart-grid:rgba(61,92,255,0.10); --chart-spine:rgba(61,92,255,0.20);
 }
 
-/* ─────────────────────────────────────────
-   DARK MODE TOKENS
-───────────────────────────────────────── */
+/* DARK MODE TOKENS */
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg-base:      #080d1e;
-    --bg-card:      rgba(14,20,48,0.90);
-    --bg-card2:     rgba(20,28,62,0.85);
-    --bg-sidebar:   rgba(8,12,30,0.98);
-
-    --text-primary:  #e8ecff;
-    --text-secondary:#a0aad0;
-    --text-muted:    #5c6899;
-    --text-on-dark:  #e8ecff;
-
-    --border-light:  rgba(99,120,255,0.12);
-    --border-card:   rgba(99,120,255,0.18);
-    --shadow-card:   0 4px 32px rgba(0,0,0,0.45), 0 1px 6px rgba(0,0,0,0.30);
-    --shadow-hover:  0 14px 48px rgba(61,92,255,0.22);
-
-    --gradient-card: linear-gradient(135deg, rgba(61,92,255,0.10) 0%, rgba(0,201,224,0.06) 100%);
-    --tab-bg:        rgba(14,20,48,0.80);
-    --tab-inactive:  rgba(14,20,48,0.60);
-    --tab-active-bg: linear-gradient(135deg, rgba(61,92,255,0.22) 0%, rgba(0,201,224,0.16) 100%);
-
-    --chart-bg:      #0d1330;
-    --chart-text:    #c8d0f0;
-    --chart-grid:    rgba(99,120,255,0.12);
-    --chart-spine:   rgba(99,120,255,0.18);
+    --bg-base:#080d1e; --bg-card:rgba(14,20,48,0.90); --bg-card2:rgba(20,28,62,0.85); --bg-sidebar:rgba(8,12,30,0.98);
+    --text-primary:#e8ecff; --text-secondary:#a0aad0; --text-muted:#5c6899; --text-on-dark:#e8ecff;
+    --border-light:rgba(99,120,255,0.12); --border-card:rgba(99,120,255,0.18);
+    --shadow-card:0 4px 32px rgba(0,0,0,0.45), 0 1px 6px rgba(0,0,0,0.30);
+    --shadow-hover:0 14px 48px rgba(61,92,255,0.22);
+    --gradient-card:linear-gradient(135deg,rgba(61,92,255,0.10) 0%,rgba(0,201,224,0.06) 100%);
+    --tab-bg:rgba(14,20,48,0.80); --tab-inactive:rgba(14,20,48,0.60);
+    --tab-active-bg:linear-gradient(135deg,rgba(61,92,255,0.22) 0%,rgba(0,201,224,0.16) 100%);
+    --chart-bg:#0d1330; --chart-text:#c8d0f0; --chart-grid:rgba(99,120,255,0.12); --chart-spine:rgba(99,120,255,0.18);
   }
 }
 
-/* ─────────────────────────────────────────
-   APP BACKGROUND
-───────────────────────────────────────── */
+/* APP BACKGROUND */
 [data-testid="stAppViewContainer"] {
   background:
     radial-gradient(ellipse 900px 520px at 10% -10%, rgba(61,92,255,0.18), transparent 60%),
@@ -143,7 +83,6 @@ st.markdown(
   color: var(--text-primary);
   min-height: 100vh;
 }
-
 @media (prefers-color-scheme: dark) {
   [data-testid="stAppViewContainer"] {
     background:
@@ -154,393 +93,186 @@ st.markdown(
   }
 }
 
-/* ─────────────────────────────────────────
-   SIDEBAR
-───────────────────────────────────────── */
-[data-testid="stSidebar"] {
-  background: var(--bg-sidebar) !important;
-  border-right: 1px solid var(--border-card);
+/* SIDEBAR */
+[data-testid="stSidebar"] { background: var(--bg-sidebar) !important; border-right: 1px solid var(--border-card); }
+[data-testid="stSidebar"] * { color: var(--text-on-dark) !important; }
+[data-testid="stSidebar"] h1,[data-testid="stSidebar"] h2,[data-testid="stSidebar"] h3 { color:#ffffff !important; }
+[data-testid="stSidebar"] [data-testid="stCaptionContainer"],[data-testid="stSidebar"] .stCaption { color: var(--text-muted) !important; font-size:0.80rem !important; }
+[data-testid="stSidebar"] .stNumberInput label,[data-testid="stSidebar"] .stSelectbox label,[data-testid="stSidebar"] .stDateInput label,[data-testid="stSidebar"] .stCheckbox label {
+  color:#c8d0ff !important; font-weight:600 !important; font-size:0.88rem !important;
 }
-
-[data-testid="stSidebar"] * {
-  color: var(--text-on-dark) !important;
-}
-[data-testid="stSidebar"] h1,
-[data-testid="stSidebar"] h2,
-[data-testid="stSidebar"] h3 {
-  color: #ffffff !important;
-}
-[data-testid="stSidebar"] [data-testid="stCaptionContainer"],
-[data-testid="stSidebar"] .stCaption {
-  color: var(--text-muted) !important;
-  font-size: 0.80rem !important;
-}
-[data-testid="stSidebar"] .stNumberInput label,
-[data-testid="stSidebar"] .stSelectbox label,
-[data-testid="stSidebar"] .stDateInput label,
-[data-testid="stSidebar"] .stCheckbox label {
-  color: #c8d0ff !important;
-  font-weight: 600 !important;
-  font-size: 0.88rem !important;
-}
-[data-testid="stSidebar"] hr {
-  border-color: rgba(99,120,255,0.20) !important;
-}
+[data-testid="stSidebar"] hr { border-color: rgba(99,120,255,0.20) !important; }
 [data-testid="stSidebar"] [data-baseweb="input"] input {
-  background: rgba(255,255,255,0.06) !important;
-  border-color: rgba(99,120,255,0.25) !important;
-  color: #e8ecff !important;
-  border-radius: 10px !important;
+  background: rgba(255,255,255,0.06) !important; border-color: rgba(99,120,255,0.25) !important; color:#e8ecff !important; border-radius:10px !important;
 }
-
-/* Sidebar section labels */
 [data-testid="stSidebar"] .sidebar-section {
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--accent-cyan) !important;
-  margin: 1.4rem 0 0.5rem 0;
-  padding-bottom: 0.3rem;
-  border-bottom: 1px solid rgba(0,201,224,0.20);
+  font-size:0.72rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color: var(--accent-cyan) !important;
+  margin:1.4rem 0 0.5rem 0; padding-bottom:0.3rem; border-bottom:1px solid rgba(0,201,224,0.20);
 }
 
-/* ─────────────────────────────────────────
-   MAIN TITLE
-───────────────────────────────────────── */
+/* MAIN TITLE */
 .main-title {
-  font-size: 2.8rem;
-  font-weight: 800;
-  background: var(--gradient-hero);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  text-align: center;
-  padding: 1.4rem 0 0.4rem;
-  letter-spacing: -0.02em;
-  line-height: 1.1;
+  font-size:2.8rem; font-weight:800; background: var(--gradient-hero);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+  text-align:center; padding:1.4rem 0 0.4rem; letter-spacing:-0.02em; line-height:1.1;
 }
-
-.main-subtitle {
-  text-align: center;
-  color: var(--text-muted);
-  font-size: 1.02rem;
-  font-weight: 400;
-  margin-bottom: 1.8rem;
-  letter-spacing: 0.01em;
-}
-
+.main-subtitle { text-align:center; color: var(--text-muted); font-size:1.02rem; font-weight:400; margin-bottom:1.8rem; letter-spacing:0.01em; }
 .subtitle {
-  font-size: 1.25rem;
-  font-weight: 800;
-  color: var(--text-primary);
-  margin: 1.4rem 0 1rem 0;
-  padding-bottom: 0.55rem;
-  border-bottom: 2px solid;
-  border-image: var(--gradient-hero) 1;
-  letter-spacing: -0.01em;
+  font-size:1.25rem; font-weight:800; color: var(--text-primary); margin:1.4rem 0 1rem 0;
+  padding-bottom:0.55rem; border-bottom:2px solid; border-image: var(--gradient-hero) 1; letter-spacing:-0.01em;
 }
 
-/* ─────────────────────────────────────────
-   CARDS
-───────────────────────────────────────── */
+/* CARDS */
 .custom-card {
-  background: var(--bg-card);
-  background-image: var(--gradient-card);
-  border-radius: 18px;
-  padding: 1.4rem 1.5rem;
-  box-shadow: var(--shadow-card);
-  margin: 0.8rem 0;
-  border: 1px solid var(--border-card);
-  transition: box-shadow 0.25s ease, transform 0.25s ease;
-  position: relative;
-  overflow: hidden;
+  background: var(--bg-card); background-image: var(--gradient-card);
+  border-radius:18px; padding:1.4rem 1.5rem; box-shadow: var(--shadow-card);
+  margin:0.8rem 0; border:1px solid var(--border-card);
+  transition: box-shadow 0.25s ease, transform 0.25s ease; position:relative; overflow:hidden;
 }
-.custom-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 3px;
-  background: var(--gradient-hero);
-  border-radius: 18px 18px 0 0;
-}
-.custom-card:hover {
-  box-shadow: var(--shadow-hover);
-  transform: translateY(-2px);
-}
-.custom-card h1, .custom-card h2, .custom-card h3, .custom-card h4,
-.custom-card p, .custom-card span, .custom-card div {
-  color: var(--text-primary) !important;
-}
-.custom-card h4 {
-  font-weight: 700;
-  font-size: 1.05rem;
-  margin-bottom: 0.6rem;
-}
+.custom-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background: var(--gradient-hero); border-radius:18px 18px 0 0; }
+.custom-card:hover { box-shadow: var(--shadow-hover); transform: translateY(-2px); }
+.custom-card h1,.custom-card h2,.custom-card h3,.custom-card h4,.custom-card p,.custom-card span,.custom-card div { color: var(--text-primary) !important; }
+.custom-card h4 { font-weight:700; font-size:1.05rem; margin-bottom:0.6rem; }
 
-/* ─────────────────────────────────────────
-   BADGES
-───────────────────────────────────────── */
+/* BADGES */
 .badge {
-  display: inline-block;
-  padding: 0.28rem 0.80rem;
-  border-radius: 999px;
-  font-size: 0.80rem;
-  font-weight: 700;
-  margin: 0.20rem 0.20rem 0.20rem 0;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  display:inline-block; padding:0.28rem 0.80rem; border-radius:999px; font-size:0.80rem; font-weight:700;
+  margin:0.20rem 0.20rem 0.20rem 0; letter-spacing:0.04em; text-transform:uppercase;
 }
-.badge-prophet {
-  background: rgba(0,192,122,0.14);
-  color: #00c07a;
-  border: 1px solid rgba(0,192,122,0.28);
-}
-.badge-sarimax {
-  background: rgba(245,166,35,0.14);
-  color: #f5a623;
-  border: 1px solid rgba(245,166,35,0.28);
-}
+.badge-prophet { background: rgba(0,192,122,0.14); color:#00c07a; border:1px solid rgba(0,192,122,0.28); }
+.badge-sarimax { background: rgba(245,166,35,0.14); color:#f5a623; border:1px solid rgba(245,166,35,0.28); }
 
-/* ─────────────────────────────────────────
-   TABS
-───────────────────────────────────────── */
-.stTabs [data-baseweb="tab-list"] {
-  gap: 6px;
-  background: var(--tab-bg);
-  border: 1px solid var(--border-card);
-  border-radius: 16px;
-  padding: 0.40rem;
-  backdrop-filter: blur(12px);
-}
+/* TABS */
+.stTabs [data-baseweb="tab-list"] { gap:6px; background: var(--tab-bg); border:1px solid var(--border-card); border-radius:16px; padding:0.40rem; backdrop-filter: blur(12px); }
 .stTabs [data-baseweb="tab"] {
-  height: 44px;
-  background: var(--tab-inactive);
-  border-radius: 12px;
-  color: var(--text-secondary);
-  font-weight: 700;
-  font-size: 0.90rem;
-  padding: 0 1.3rem;
-  transition: all 0.22s ease;
-  border: 1px solid transparent;
+  height:44px; background: var(--tab-inactive); border-radius:12px; color: var(--text-secondary);
+  font-weight:700; font-size:0.90rem; padding:0 1.3rem; transition: all 0.22s ease; border:1px solid transparent;
 }
-.stTabs [data-baseweb="tab"]:hover {
-  background: rgba(61,92,255,0.09);
-  color: var(--text-primary);
-}
+.stTabs [data-baseweb="tab"]:hover { background: rgba(61,92,255,0.09); color: var(--text-primary); }
 .stTabs [aria-selected="true"] {
-  background: var(--tab-active-bg) !important;
-  color: var(--text-primary) !important;
-  border-color: var(--tab-active-border) !important;
+  background: var(--tab-active-bg) !important; color: var(--text-primary) !important; border-color: var(--tab-active-border) !important;
   box-shadow: 0 4px 16px rgba(61,92,255,0.18);
 }
 
-/* ─────────────────────────────────────────
-   BUTTONS
-───────────────────────────────────────── */
+/* BUTTONS */
 .stButton > button {
-  background: var(--gradient-btn);
-  color: #ffffff !important;
-  border: none;
-  border-radius: 12px;
-  padding: 0.65rem 1.5rem;
-  font-weight: 700;
-  font-size: 0.92rem;
-  transition: all 0.22s ease;
-  letter-spacing: 0.02em;
+  background: var(--gradient-btn); color:#ffffff !important; border:none; border-radius:12px;
+  padding:0.65rem 1.5rem; font-weight:700; font-size:0.92rem; transition: all 0.22s ease; letter-spacing:0.02em;
   box-shadow: 0 4px 16px rgba(61,92,255,0.24);
 }
-.stButton > button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 28px rgba(61,92,255,0.35);
-}
-.stButton > button:active {
-  transform: translateY(0);
-}
+.stButton > button:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(61,92,255,0.35); }
+.stButton > button:active { transform: translateY(0); }
 .stDownloadButton > button {
-  background: var(--gradient-dl);
-  color: #ffffff !important;
-  border-radius: 12px;
-  padding: 0.65rem 1.3rem;
-  font-weight: 700;
-  border: none;
-  box-shadow: 0 4px 14px rgba(0,192,122,0.24);
-  transition: all 0.22s ease;
+  background: var(--gradient-dl); color:#ffffff !important; border-radius:12px; padding:0.65rem 1.3rem; font-weight:700;
+  border:none; box-shadow: 0 4px 14px rgba(0,192,122,0.24); transition: all 0.22s ease;
 }
-.stDownloadButton > button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 26px rgba(0,192,122,0.35);
-}
+.stDownloadButton > button:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(0,192,122,0.35); }
 
-/* ─────────────────────────────────────────
-   METRICS
-───────────────────────────────────────── */
+/* METRICS */
 [data-testid="stMetric"] {
-  background: var(--bg-card);
-  background-image: var(--gradient-card);
-  border: 1px solid var(--border-card);
-  border-radius: 16px;
-  padding: 1rem 1.2rem !important;
-  box-shadow: var(--shadow-card);
-  transition: box-shadow 0.22s ease, transform 0.22s ease;
-  position: relative;
-  overflow: hidden;
+  background: var(--bg-card); background-image: var(--gradient-card); border:1px solid var(--border-card); border-radius:16px;
+  padding:1rem 1.2rem !important; box-shadow: var(--shadow-card);
+  transition: box-shadow 0.22s ease, transform 0.22s ease; position:relative; overflow:hidden;
 }
-[data-testid="stMetric"]:hover {
-  box-shadow: var(--shadow-hover);
-  transform: translateY(-2px);
-}
-[data-testid="stMetric"]::after {
-  content: '';
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
-  height: 2px;
-  background: var(--gradient-hero);
-  opacity: 0.45;
-}
+[data-testid="stMetric"]:hover { box-shadow: var(--shadow-hover); transform: translateY(-2px); }
+[data-testid="stMetric"]::after { content:''; position:absolute; bottom:0; left:0; right:0; height:2px; background: var(--gradient-hero); opacity:0.45; }
 [data-testid="stMetricLabel"] {
-  color: var(--text-muted) !important;
-  font-weight: 600 !important;
-  font-size: 0.82rem !important;
-  letter-spacing: 0.06em !important;
-  text-transform: uppercase !important;
+  color: var(--text-muted) !important; font-weight:600 !important; font-size:0.82rem !important;
+  letter-spacing:0.06em !important; text-transform:uppercase !important;
 }
-[data-testid="stMetricValue"] {
-  color: var(--text-primary) !important;
-  font-weight: 800 !important;
-  font-size: 1.55rem !important;
-  letter-spacing: -0.02em !important;
-}
-[data-testid="stMetricDelta"] {
-  font-weight: 600 !important;
-  font-size: 0.85rem !important;
-}
+[data-testid="stMetricValue"] { color: var(--text-primary) !important; font-weight:800 !important; font-size:1.55rem !important; letter-spacing:-0.02em !important; }
+[data-testid="stMetricDelta"] { font-weight:600 !important; font-size:0.85rem !important; }
 
-/* ─────────────────────────────────────────
-   DATAFRAME
-───────────────────────────────────────── */
-[data-testid="stDataFrame"] {
-  border-radius: 14px;
-  overflow: hidden;
-  border: 1px solid var(--border-card);
-  box-shadow: var(--shadow-card);
-}
+/* DATAFRAME */
+[data-testid="stDataFrame"] { border-radius:14px; overflow:hidden; border:1px solid var(--border-card); box-shadow: var(--shadow-card); }
 .dataframe thead tr th {
   background: linear-gradient(135deg, #1a2a6c 0%, #3d5cff 100%) !important;
-  color: #ffffff !important;
-  font-weight: 700 !important;
-  font-size: 0.88rem !important;
-  letter-spacing: 0.04em !important;
-  padding: 0.75rem 1rem !important;
+  color:#ffffff !important; font-weight:700 !important; font-size:0.88rem !important; letter-spacing:0.04em !important;
+  padding:0.75rem 1rem !important;
 }
-.dataframe tbody tr td {
-  font-family: 'DM Mono', monospace !important;
-  font-size: 0.88rem !important;
-}
-.dataframe tbody tr:hover td {
-  background: rgba(61,92,255,0.07) !important;
-}
+.dataframe tbody tr td { font-family: 'DM Mono', monospace !important; font-size:0.88rem !important; }
+.dataframe tbody tr:hover td { background: rgba(61,92,255,0.07) !important; }
 
-/* ─────────────────────────────────────────
-   ALERTS / INFO
-───────────────────────────────────────── */
-[data-testid="stAlert"] {
-  border-radius: 12px !important;
-  border: 1px solid var(--border-card) !important;
-  font-weight: 500 !important;
-}
+/* ALERTS */
+[data-testid="stAlert"] { border-radius:12px !important; border:1px solid var(--border-card) !important; font-weight:500 !important; }
 
-/* ─────────────────────────────────────────
-   HR / SEPARATOR
-───────────────────────────────────────── */
-hr {
-  margin: 1.8rem 0;
-  border: none;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--accent-blue), var(--accent-cyan), transparent);
-  opacity: 0.4;
-}
+/* HR */
+hr { margin:1.8rem 0; border:none; height:1px; background: linear-gradient(90deg, transparent, var(--accent-blue), var(--accent-cyan), transparent); opacity:0.4; }
 
-/* ─────────────────────────────────────────
-   GENERAL TEXT
-───────────────────────────────────────── */
-.block-container,
-.stMarkdown,
-.stText,
-.stCaption,
-.stSubheader,
-.stHeader {
-  color: var(--text-primary);
-}
-h1, h2, h3, h4, h5, h6 {
-  color: var(--text-primary) !important;
-}
-p, span, div, label {
-  color: var(--text-primary);
-}
+/* TEXT */
+.block-container,.stMarkdown,.stText,.stCaption,.stSubheader,.stHeader { color: var(--text-primary); }
+h1,h2,h3,h4,h5,h6 { color: var(--text-primary) !important; }
+p,span,div,label { color: var(--text-primary); }
+.block-container { padding-top:1.5rem !important; padding-bottom:3rem !important; }
 
-/* Main block container spacing */
-.block-container {
-  padding-top: 1.5rem !important;
-  padding-bottom: 3rem !important;
-}
-
-/* Spinner */
-[data-testid="stSpinner"] {
-  color: var(--accent-blue) !important;
-}
-
-/* Number / Select / Date inputs in main area */
-[data-baseweb="input"] input,
-[data-baseweb="textarea"] textarea,
-[data-baseweb="select"] div {
-  color: var(--text-primary) !important;
-}
-
-/* Scrollbar polish */
-::-webkit-scrollbar { width: 6px; height: 6px; }
+/* SCROLLBAR */
+::-webkit-scrollbar { width:6px; height:6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb {
-  background: rgba(61,92,255,0.30);
-  border-radius: 99px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(61,92,255,0.55);
-}
+::-webkit-scrollbar-thumb { background: rgba(61,92,255,0.30); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(61,92,255,0.55); }
 
-/* Footer */
+/* FOOTER */
 .app-footer {
-  text-align: center;
-  color: var(--text-muted);
-  padding: 1.8rem 0;
-  font-size: 0.88rem;
-  font-weight: 500;
-  border-top: 1px solid var(--border-light);
-  margin-top: 1.5rem;
+  text-align:center; color: var(--text-muted); padding:1.8rem 0; font-size:0.88rem; font-weight:500;
+  border-top:1px solid var(--border-light); margin-top:1.5rem;
 }
 .app-footer strong {
-  background: var(--gradient-hero);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  background: var(--gradient-hero); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
 }
 </style>
 """,
     unsafe_allow_html=True,
 )
 
-# Paths (repo)
+# =============================================================================
+# FUNCIONES DRIVE + LECTURA CSV
+# =============================================================================
+@st.cache_data(show_spinner=False)
+def ensure_csv_from_drive(file_id: str, local_path: str) -> str:
+    # crea el directorio si hace falta
+    os.makedirs(os.path.dirname(local_path), exist_ok=True)
+
+    if os.path.exists(local_path) and os.path.getsize(local_path) > 0:
+        return local_path
+
+    url = f"https://drive.google.com/uc?id={file_id}"
+    ok = gdown.download(url, local_path, quiet=True)
+
+    if not ok or (not os.path.exists(local_path)) or os.path.getsize(local_path) == 0:
+        raise FileNotFoundError(
+            "No se pudo descargar el CSV desde Google Drive. "
+            "Verifica que el archivo esté en modo público o compartido 'cualquiera con el enlace'."
+        )
+    return local_path
+
+@st.cache_data(show_spinner=False)
+def load_base_csv_from_drive(file_id: str) -> pd.DataFrame:
+    path = ensure_csv_from_drive(file_id, CSV_LOCAL_PATH)
+    try:
+        df = pd.read_csv(path)
+    except Exception:
+        df = pd.read_csv(path, sep=";")
+    df.columns = [c.strip() for c in df.columns]
+    return df
+
+# =============================================================================
+# PATHS MODELOS
+# =============================================================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODELS_DIR = os.path.join(BASE_DIR, "modelos")
 PROPHET_PATH = os.path.join(MODELS_DIR, "prophet_model.joblib")
 SARIMAX_PATH = os.path.join(MODELS_DIR, "sarimax_model.joblib")
-with st.spinner("📥 Descargando CSV base desde Google Drive (solo la primera vez)…"):
-    df_base = load_base_csv_from_drive(DRIVE_FILE_ID)
 
+# =============================================================================
+# COLUMNAS DEL CSV (AJUSTA SI CAMBIA)
+# =============================================================================
+COL_FECHA = "FECHA"        # o "Fecha"
+COL_PRODUCTO = "PRODUCTO"  # o "Producto"
+COL_VOL = "HL"             # o "VOLUMEN_HL"
 
-# Si lo tienes en la misma carpeta que app.py, usa:
-# CSV_BASE_PATH = os.path.join(BASE_DIR, "CBN_Cochabamba_2024_LIMPIO.csv")
-# Feriados 2025
+# =============================================================================
+# FERIADOS 2025
+# =============================================================================
 FERIADOS_2025 = pd.to_datetime(
     [
         "2025-01-01", "2025-01-22", "2025-03-03",
@@ -550,6 +282,9 @@ FERIADOS_2025 = pd.to_datetime(
     ]
 )
 
+# =============================================================================
+# HELPERS MODELOS / FEATURES / VIEWS
+# =============================================================================
 @st.cache_resource
 def load_model(path: str):
     return joblib.load(path)
@@ -588,18 +323,12 @@ def resample_view(s: pd.Series, vista: str) -> pd.Series:
         return s.resample("MS").sum()
     return s
 
-
 def _apply_chart_style(fig, ax_list, title="", xlabel="Fecha", ylabel="Volumen (HL)"):
-    """
-    Apply a consistent, dual-mode-safe chart style.
-    Uses a crisp dark background for charts regardless of OS theme,
-    ensuring all text and lines are always visible.
-    """
-    CHART_BG     = "#0e1428"
-    CHART_FG     = "#c8d0f0"
-    GRID_C       = (0.38, 0.42, 0.68, 0.18)
-    SPINE_C      = (0.38, 0.42, 0.68, 0.25)
-    TITLE_C      = "#e8ecff"
+    CHART_BG = "#0e1428"
+    CHART_FG = "#c8d0f0"
+    GRID_C = (0.38, 0.42, 0.68, 0.18)
+    SPINE_C = (0.38, 0.42, 0.68, 0.25)
+    TITLE_C = "#e8ecff"
 
     fig.patch.set_facecolor(CHART_BG)
     for ax in (ax_list if isinstance(ax_list, (list, tuple)) else [ax_list]):
@@ -620,7 +349,6 @@ def _apply_chart_style(fig, ax_list, title="", xlabel="Fecha", ylabel="Volumen (
             ax.set_title(title, fontsize=15, fontweight="800", pad=16, color=TITLE_C)
 
     return CHART_FG, TITLE_C
-
 
 def plot_with_ci(index, mean, low=None, up=None, title="", color="#3d5cff"):
     fig, ax = plt.subplots(figsize=(14, 5.5))
@@ -647,7 +375,6 @@ def build_mix_producto_2024(df: pd.DataFrame, col_fecha: str, col_producto: str,
 
     dfx[col_producto] = dfx[col_producto].astype(str).str.strip()
     dfx = dfx[dfx[col_producto] != ""]
-
     dfx[col_vol] = pd.to_numeric(dfx[col_vol], errors="coerce").fillna(0)
 
     dfy = dfx[dfx[col_fecha].dt.year == year].copy()
@@ -662,27 +389,22 @@ def build_mix_producto_2024(df: pd.DataFrame, col_fecha: str, col_producto: str,
     mix = mix.sort_values(f"VENTA_{year}_HL", ascending=False)
     return mix, total_year
 
-
 def forecast_by_mix(mix_df: pd.DataFrame, total_2025_forecast: float):
     out = mix_df.copy()
     out["VENTA_2025_EST_HL"] = out["PARTICIPACION_%"] * float(total_2025_forecast)
     out = out.sort_values("VENTA_2025_EST_HL", ascending=False)
     return out
 
-
 def plot_top_bars_dark(df_top: pd.DataFrame, x_col: str, y_col: str, title: str, color: str):
-    # 🔥 más grande + horizontal + estilo consistente con tus charts
     fig, ax = plt.subplots(figsize=(16, 7.2))
     fg, _ = _apply_chart_style(fig, ax, title=title, xlabel="Volumen (HL)", ylabel="")
 
-    # Orden top arriba
     d = df_top.iloc[::-1].copy()
     ax.barh(d[x_col].astype(str), d[y_col].astype(float), color=color, alpha=0.90)
 
     ax.tick_params(axis="y", labelsize=10, colors=fg)
     ax.tick_params(axis="x", labelsize=10, colors=fg)
 
-    # Etiquetas al final de cada barra
     maxv = float(d[y_col].max()) if len(d) else 0.0
     pad = maxv * 0.01 if maxv > 0 else 0.0
     for i, v in enumerate(d[y_col].astype(float).values):
@@ -691,14 +413,18 @@ def plot_top_bars_dark(df_top: pd.DataFrame, x_col: str, y_col: str, title: str,
     plt.tight_layout()
     st.pyplot(fig, use_container_width=True)
 
-# ─── HEADER ────────────────────────────────────────────────────────────────
+# =============================================================================
+# HEADER
+# =============================================================================
 st.markdown('<h1 class="main-title">📈 Forecast de Ventas 2025</h1>', unsafe_allow_html=True)
 st.markdown(
     '<div class="main-subtitle">Comparación <strong>Prophet</strong> vs <strong>SARIMAX</strong> &nbsp;·&nbsp; Cochabamba, Bolivia</div>',
     unsafe_allow_html=True,
 )
 
-# ─── SIDEBAR ───────────────────────────────────────────────────────────────
+# =============================================================================
+# SIDEBAR (SOLO CONFIG QUE NO DEPENDE DE pred_prophet)
+# =============================================================================
 with st.sidebar:
     st.markdown("### ⚙️ Configuración")
     st.markdown("---")
@@ -724,29 +450,23 @@ if pd.to_datetime(end_date) < pd.to_datetime(start_date):
     st.error("⚠️ Rango inválido: la fecha de inicio debe ser anterior a la fecha de fin.")
     st.stop()
 
+# =============================================================================
+# LOAD CSV (DRIVE)
+# =============================================================================
+try:
+    with st.spinner("📥 Descargando CSV base desde Google Drive (solo la primera vez)…"):
+        df_base = load_base_csv_from_drive(DRIVE_FILE_ID)
+except Exception as e:
+    st.error(f"No pude descargar/leer el CSV desde Drive: {e}")
+    df_base = None
+
+# =============================================================================
+# LOAD & PREDICT
+# =============================================================================
 dates_2025 = pd.date_range("2025-01-01", "2025-12-31", freq="D")
 mask_range = (dates_2025 >= pd.to_datetime(start_date)) & (dates_2025 <= pd.to_datetime(end_date))
 dates_view = dates_2025[mask_range]
 
-st.markdown("---")
-st.markdown('<div class="sidebar-section">🛒 Top productos</div>', unsafe_allow_html=True)
-
-top_n = st.slider("Top N", min_value=5, max_value=30, value=10, step=1)
-
-base_total_2025 = st.selectbox(
-    "Total 2025 para repartir por mix",
-    ["Prophet", "SARIMAX", "Promedio", "Manual"],
-    index=0
-)
-
-total_2025_manual = st.number_input(
-    "Total 2025 manual (HL)",
-    min_value=0.0,
-    value=float(pred_prophet.sum()),
-    step=1000.0
-)
-
-# ─── LOAD & PREDICT ────────────────────────────────────────────────────────
 with st.spinner("🔄 Cargando modelos desde el repositorio…"):
     if not os.path.exists(PROPHET_PATH):
         st.error(f"No se encontró: {PROPHET_PATH}")
@@ -782,23 +502,23 @@ with st.spinner("🔄 Cargando modelos desde el repositorio…"):
 
     pred_prophet = pd.Series(fc_p["yhat"].values, index=dates_2025)
     low_p = pd.Series(fc_p["yhat_lower"].values, index=dates_2025)
-    up_p  = pd.Series(fc_p["yhat_upper"].values, index=dates_2025)
+    up_p = pd.Series(fc_p["yhat_upper"].values, index=dates_2025)
 
     fc_s = sarimax_model.get_forecast(steps=len(exog_2025), exog=exog_2025)
     pred_sarimax = pd.Series(np.asarray(fc_s.predicted_mean), index=dates_2025)
     ci_s = fc_s.conf_int()
     low_s = pd.Series(np.asarray(ci_s.iloc[:, 0]), index=dates_2025)
-    up_s  = pd.Series(np.asarray(ci_s.iloc[:, 1]), index=dates_2025)
+    up_s = pd.Series(np.asarray(ci_s.iloc[:, 1]), index=dates_2025)
 
     pred_prophet = apply_operational_zeros(pred_prophet, FERIADOS_2025)
     pred_sarimax = apply_operational_zeros(pred_sarimax, FERIADOS_2025)
-    low_p  = apply_operational_zeros(low_p, FERIADOS_2025)
-    up_p   = apply_operational_zeros(up_p, FERIADOS_2025)
-    low_s  = apply_operational_zeros(low_s, FERIADOS_2025)
-    up_s   = apply_operational_zeros(up_s, FERIADOS_2025)
+    low_p = apply_operational_zeros(low_p, FERIADOS_2025)
+    up_p = apply_operational_zeros(up_p, FERIADOS_2025)
+    low_s = apply_operational_zeros(low_s, FERIADOS_2025)
+    up_s = apply_operational_zeros(up_s, FERIADOS_2025)
 
-    p_view  = resample_view(pred_prophet, vista)
-    s_view  = resample_view(pred_sarimax, vista)
+    p_view = resample_view(pred_prophet, vista)
+    s_view = resample_view(pred_sarimax, vista)
     lp_view = resample_view(low_p, vista)
     up_view = resample_view(up_p, vista)
     ls_view = resample_view(low_s, vista)
@@ -809,23 +529,47 @@ with st.spinner("🔄 Cargando modelos desde el repositorio…"):
         lp_view, up_view = lp_view.cumsum(), up_view.cumsum()
         ls_view, us_view = ls_view.cumsum(), us_view.cumsum()
 
-# ─── TABS ──────────────────────────────────────────────────────────────────
+# =============================================================================
+# SIDEBAR: TOP PRODUCTOS (AHORA SÍ, DESPUÉS DE pred_prophet)
+# =============================================================================
+with st.sidebar:
+    st.markdown("---")
+    st.markdown('<div class="sidebar-section">🛒 Top productos</div>', unsafe_allow_html=True)
+
+    top_n = st.slider("Top N", min_value=5, max_value=30, value=10, step=1)
+
+    base_total_2025 = st.selectbox(
+        "Total 2025 para repartir por mix",
+        ["Prophet", "SARIMAX", "Promedio", "Manual"],
+        index=0
+    )
+
+    total_2025_manual = st.number_input(
+        "Total 2025 manual (HL)",
+        min_value=0.0,
+        value=float(pred_prophet.sum()),
+        step=1000.0
+    )
+
+# =============================================================================
+# TABS
+# =============================================================================
 tab1, tab2, tab3, tab4 = st.tabs(
     ["📊  Resumen", "🔄  Comparación", "🔎  Detalle", "📈  Estadísticas"]
 )
 
-# ── TAB 1: RESUMEN ─────────────────────────────────────────────────────────
+# ── TAB 1: RESUMEN
 with tab1:
     st.markdown('<h2 class="subtitle">Resumen Ejecutivo</h2>', unsafe_allow_html=True)
 
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("🟢 Prophet",   f"{pred_prophet.sum():,.0f} HL")
-    col2.metric("🟠 SARIMAX",   f"{pred_sarimax.sum():,.0f} HL")
+    col1.metric("🟢 Prophet", f"{pred_prophet.sum():,.0f} HL")
+    col2.metric("🟠 SARIMAX", f"{pred_sarimax.sum():,.0f} HL")
 
     diff = pred_prophet.sum() - pred_sarimax.sum()
     delta_pct = (diff / pred_sarimax.sum() * 100) if pred_sarimax.sum() != 0 else 0.0
     col3.metric("📊 Diferencia", f"{abs(diff):,.0f} HL", delta=f"{delta_pct:+.1f}%")
-    col4.metric("📈 Promedio",   f"{((pred_prophet.sum() + pred_sarimax.sum()) / 2):,.0f} HL")
+    col4.metric("📈 Promedio", f"{((pred_prophet.sum() + pred_sarimax.sum()) / 2):,.0f} HL")
 
     st.markdown("<hr/>", unsafe_allow_html=True)
 
@@ -839,7 +583,7 @@ with tab1:
         else:
             pct = ((pred_sarimax.sum() - pred_prophet.sum()) / max(pred_prophet.sum(), 1e-9)) * 100
             st.info(f"SARIMAX proyecta **{pct:.1f}%** más volumen que Prophet para el período seleccionado.")
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
     with col_b:
         st.markdown('<div class="custom-card">', unsafe_allow_html=True)
@@ -848,7 +592,7 @@ with tab1:
         st.write(f"**Vista:** {vista}")
         st.write(f"**Ceros operativos (Prophet):** {(pred_prophet == 0).sum()} días")
         st.write(f"**Ceros operativos (SARIMAX):** {(pred_sarimax == 0).sum()} días")
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("---")
     st.markdown("#### 📈 Comparación Visual 2025")
@@ -890,7 +634,7 @@ with tab1:
     plt.tight_layout()
     st.pyplot(fig)
 
-# ── TAB 2: COMPARACIÓN ─────────────────────────────────────────────────────
+# ── TAB 2: COMPARACIÓN
 with tab2:
     st.markdown('<h2 class="subtitle">Comparación Detallada</h2>', unsafe_allow_html=True)
 
@@ -903,7 +647,7 @@ with tab2:
     col1, col2, col3 = st.columns(3)
     col1.metric("Prophet (rango)", f"{df_compare['Prophet'].sum():,.0f} HL")
     col2.metric("SARIMAX (rango)", f"{df_compare['SARIMAX'].sum():,.0f} HL")
-    col3.metric("Diferencia",      f"{df_compare['Diff'].sum():,.0f} HL")
+    col3.metric("Diferencia", f"{df_compare['Diff'].sum():,.0f} HL")
 
     st.markdown("---")
 
@@ -927,7 +671,8 @@ with tab2:
     ax1.set_title("Comparación en Rango Seleccionado", fontsize=15, fontweight="800", color="#e8ecff", pad=14)
     ax1.set_ylabel("Volumen (HL)", fontsize=12, fontweight="600", color=FG)
     leg1 = ax1.legend(loc="best", frameon=True, fontsize=10, facecolor="#1a2040", edgecolor="none")
-    for t in leg1.get_texts(): t.set_color(FG)
+    for t in leg1.get_texts():
+        t.set_color(FG)
 
     colors = np.where(df_compare["Diff"] >= 0, "#00c07a", "#f04b4b")
     ax2.bar(df_compare.index, df_compare["Diff"], color=colors, alpha=0.75, width=0.8)
@@ -961,7 +706,7 @@ with tab2:
             mensual.reset_index().rename(columns={"index": "mes"}).to_excel(writer, sheet_name="Mensual", index=False)
         st.download_button("📊 Descargar Excel", output.getvalue(), "forecast_2025.xlsx", use_container_width=True)
 
-# ── TAB 3: DETALLE ─────────────────────────────────────────────────────────
+# ── TAB 3: DETALLE
 with tab3:
     st.markdown('<h2 class="subtitle">Detalle por Modelo</h2>', unsafe_allow_html=True)
 
@@ -972,15 +717,14 @@ with tab3:
         st.markdown("### 🟢 Prophet")
         st.markdown('<span class="badge badge-prophet">Machine Learning</span>', unsafe_allow_html=True)
         c1, c2 = st.columns(2)
-        c1.metric("Total",   f"{pred_prophet.sum():,.0f} HL")
-        c2.metric("Promedio",f"{pred_prophet.mean():,.1f} HL")
+        c1.metric("Total", f"{pred_prophet.sum():,.0f} HL")
+        c2.metric("Promedio", f"{pred_prophet.mean():,.1f} HL")
         st.markdown("---")
         if mostrar_intervalos:
             fig = plot_with_ci(p_view.index, p_view.values, lp_view.values, up_view.values,
                                f"Prophet — Vista {vista}", color="#00c07a")
         else:
-            fig = plot_with_ci(p_view.index, p_view.values,
-                               title=f"Prophet — Vista {vista}", color="#00c07a")
+            fig = plot_with_ci(p_view.index, p_view.values, title=f"Prophet — Vista {vista}", color="#00c07a")
         st.pyplot(fig)
         st.markdown("</div>", unsafe_allow_html=True)
 
@@ -989,26 +733,24 @@ with tab3:
         st.markdown("### 🟠 SARIMAX")
         st.markdown('<span class="badge badge-sarimax">Estadístico</span>', unsafe_allow_html=True)
         c1, c2 = st.columns(2)
-        c1.metric("Total",   f"{pred_sarimax.sum():,.0f} HL")
-        c2.metric("Promedio",f"{pred_sarimax.mean():,.1f} HL")
+        c1.metric("Total", f"{pred_sarimax.sum():,.0f} HL")
+        c2.metric("Promedio", f"{pred_sarimax.mean():,.1f} HL")
         st.markdown("---")
         if mostrar_intervalos:
             fig = plot_with_ci(s_view.index, s_view.values, ls_view.values, us_view.values,
                                f"SARIMAX — Vista {vista}", color="#f5a623")
         else:
-            fig = plot_with_ci(s_view.index, s_view.values,
-                               title=f"SARIMAX — Vista {vista}", color="#f5a623")
+            fig = plot_with_ci(s_view.index, s_view.values, title=f"SARIMAX — Vista {vista}", color="#f5a623")
         st.pyplot(fig)
         st.markdown("</div>", unsafe_allow_html=True)
 
-# ── TAB 4: ESTADÍSTICAS ────────────────────────────────────────────────────
+# ── TAB 4: ESTADÍSTICAS
 with tab4:
     st.markdown('<h2 class="subtitle">Análisis Estadístico</h2>', unsafe_allow_html=True)
-
     st.markdown('<h2 class="subtitle">Top productos 2024 (real) y 2025 (estimado por mix 2024)</h2>', unsafe_allow_html=True)
 
 if df_base is None:
-    st.warning("No se encontró el CSV limpio en el proyecto. Colócalo en /data/CBN_Cochabamba_2024_LIMPIO.csv")
+    st.warning("No se pudo cargar el CSV base desde Drive. Revisa permisos/enlace.")
 else:
     total_2025_prophet = float(pred_prophet.sum())
     total_2025_sarimax = float(pred_sarimax.sum())
@@ -1026,7 +768,6 @@ else:
         TOTAL_2025_FORECAST = float(total_2025_manual)
         base_badge = '<span class="badge">Base: Manual</span>'
 
-    # KPI cards con tu estilo
     k1, k2, k3 = st.columns(3)
     with k1:
         st.metric("Total 2025 usado (mix)", f"{TOTAL_2025_FORECAST:,.0f} HL")
@@ -1038,6 +779,7 @@ else:
 
     st.markdown("<hr/>", unsafe_allow_html=True)
 
+    # mezcla 2024
     mix_2024, total_2024 = build_mix_producto_2024(df_base, COL_FECHA, COL_PRODUCTO, COL_VOL, year=2024)
     fc_2025 = forecast_by_mix(mix_2024, TOTAL_2025_FORECAST)
 
@@ -1055,7 +797,6 @@ else:
         )
         st.markdown("</div>", unsafe_allow_html=True)
 
-        # 🔥 gráfico grande
         plot_top_bars_dark(
             top_2024, "PRODUCTO", "VENTA_2024_HL",
             f"Top {top_n} productos 2024 (HL)", color="#3d5cff"
@@ -1072,15 +813,14 @@ else:
         )
         st.markdown("</div>", unsafe_allow_html=True)
 
-        # 🔥 gráfico grande
         plot_top_bars_dark(
             top_2025, "PRODUCTO", "VENTA_2025_EST_HL",
             f"Top {top_n} productos 2025 estimado (HL)", color="#00c07a"
         )
 
     st.markdown("<hr/>", unsafe_allow_html=True)
-    st.caption("Nota: La estimación 2025 asume que la participación (mix) de productos de 2024 se mantiene en 2025.")
-    
+    st.caption("Nota: La estimación 2025 asume que el mix de productos de 2024 se mantiene en 2025.")
+
     p = pd.Series(pred_prophet.values, index=pred_prophet.index)
     s = pd.Series(pred_sarimax.values, index=pred_sarimax.index)
 
@@ -1104,7 +844,8 @@ else:
         ax.set_facecolor(CHART_BG)
         ax.tick_params(colors=FG, labelsize=10)
         for spine in ax.spines.values():
-            spine.set_alpha(0.25); spine.set_color((0.38, 0.42, 0.68, 0.30))
+            spine.set_alpha(0.25)
+            spine.set_color((0.38, 0.42, 0.68, 0.30))
         ax.grid(True, alpha=0.28, axis="y", linestyle="--", linewidth=0.6, color=(0.38, 0.42, 0.68, 0.18))
 
         ax.hist(p[p > 0], bins=30, alpha=0.65, color="#00c07a", label="Prophet", edgecolor="#0e1428", linewidth=0.5)
@@ -1113,7 +854,8 @@ else:
         ax.set_xlabel("Volumen (HL)", fontsize=11, fontweight="600", color=FG)
         ax.set_ylabel("Frecuencia", fontsize=11, fontweight="600", color=FG)
         leg = ax.legend(loc="best", frameon=True, fontsize=10, facecolor="#1a2040", edgecolor="none")
-        for t in leg.get_texts(): t.set_color(FG)
+        for t in leg.get_texts():
+            t.set_color(FG)
         plt.tight_layout()
         st.pyplot(fig)
 
@@ -1124,7 +866,8 @@ else:
         ax.set_facecolor(CHART_BG)
         ax.tick_params(colors=FG, labelsize=10)
         for spine in ax.spines.values():
-            spine.set_alpha(0.25); spine.set_color((0.38, 0.42, 0.68, 0.30))
+            spine.set_alpha(0.25)
+            spine.set_color((0.38, 0.42, 0.68, 0.30))
         ax.grid(True, alpha=0.25, linestyle="--", linewidth=0.6, color=(0.38, 0.42, 0.68, 0.18))
 
         sc = ax.scatter(p.values, s.values, alpha=0.45,
@@ -1148,7 +891,9 @@ else:
     correlation = p.corr(s)
     st.info(f"📊 **Correlación Pearson entre modelos:** `{correlation:.4f}`")
 
-# ─── FOOTER ────────────────────────────────────────────────────────────────
+# =============================================================================
+# FOOTER
+# =============================================================================
 st.markdown(
     """
 <div class="app-footer">
