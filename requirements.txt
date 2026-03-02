@@ -9,3 +9,4 @@ prophet
 statsmodels
 scipy
 gdown
+scikit-learn

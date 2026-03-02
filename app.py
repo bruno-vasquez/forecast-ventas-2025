@@ -447,6 +447,154 @@ def plot_top_bars_dark(df_top: pd.DataFrame, x_col: str, y_col: str, title: str,
     plt.tight_layout()
     show_pyplot(fig)
 
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
+
+def compute_rfv(df: pd.DataFrame, col_fecha: str, col_cliente: str, col_vol: str, year: int = 2024) -> pd.DataFrame:
+    dfx = df[[col_fecha, col_cliente, col_vol]].copy()
+    dfx[col_fecha] = pd.to_datetime(dfx[col_fecha], errors="coerce")
+    dfx = dfx.dropna(subset=[col_fecha, col_cliente])
+
+    dfx[col_vol] = pd.to_numeric(dfx[col_vol], errors="coerce").fillna(0)
+
+    # Filtrar año base para segmentación (ej: 2024)
+    dfx = dfx[dfx[col_fecha].dt.year == year].copy()
+
+    # Recency: días desde la última compra vs "fecha de corte"
+    snapshot_date = dfx[col_fecha].max() + pd.Timedelta(days=1)
+
+    rfv = (
+        dfx.groupby(col_cliente)
+        .agg(
+            Recency=(col_fecha, lambda x: (snapshot_date - x.max()).days),
+            Frequency=(col_fecha, "count"),
+            Value=(col_vol, "sum"),
+        )
+        .reset_index()
+        .rename(columns={col_cliente: "CODIGO_CLIENTE"})
+    )
+
+    # Limpieza básica
+    rfv["Frequency"] = rfv["Frequency"].astype(int)
+    rfv["Recency"] = rfv["Recency"].astype(int)
+    rfv["Value"] = rfv["Value"].astype(float)
+
+    return rfv
+
+
+def kmeans_segment_fv(rfv: pd.DataFrame, k: int = 4, random_state: int = 42) -> pd.DataFrame:
+    # KMeans sobre F y V (como tu gráfico). Log para estabilizar.
+    X = rfv[["Frequency", "Value"]].copy()
+    X["Frequency"] = np.log1p(X["Frequency"])
+    X["Value"] = np.log1p(X["Value"])
+
+    scaler = StandardScaler()
+    Xs = scaler.fit_transform(X)
+
+    km = KMeans(n_clusters=k, n_init=10, random_state=random_state)
+    rfv = rfv.copy()
+    rfv["Cluster"] = km.fit_predict(Xs)
+
+    return rfv
+
+
+def build_cluster_summary(rfv_clustered: pd.DataFrame) -> pd.DataFrame:
+    dfc = rfv_clustered.copy()
+
+    total_clients = dfc["CODIGO_CLIENTE"].nunique()
+    total_value = dfc["Value"].sum()
+
+    summary = (
+        dfc.groupby("Cluster")
+        .agg(
+            Recency_media=("Recency", "mean"),
+            Frequency_media=("Frequency", "mean"),
+            Value_HL_media=("Value", "mean"),
+            N_Clientes=("CODIGO_CLIENTE", "nunique"),
+            Volumen_total=("Value", "sum"),
+        )
+        .reset_index()
+    )
+
+    summary["%_Clientes"] = (summary["N_Clientes"] / total_clients) * 100 if total_clients else 0
+    summary["%_Volumen"] = (summary["Volumen_total"] / total_value) * 100 if total_value else 0
+
+    # ---- Perfiles (reglas simples, pero efectivas) ----
+    # Premium/VIP: baja recency, muy alta freq y value
+    # Estratégicos: alto value total o alto freq/value
+    # Activos medios: mayoría con métricas medias
+    # Inactivos/esp.: alta recency y bajo F/V
+
+    # Rankings para asignar perfiles robustos
+    summary["rank_value"] = summary["Value_HL_media"].rank(ascending=False, method="dense")
+    summary["rank_freq"] = summary["Frequency_media"].rank(ascending=False, method="dense")
+    summary["rank_rec"] = summary["Recency_media"].rank(ascending=True, method="dense")  # menor recency = mejor
+
+    def label_profile(row):
+        # Premium: top en value y freq + buena recency
+        if row["rank_value"] == 1 and row["rank_freq"] == 1:
+            return "Premium / VIP"
+        # Inactivos: recency peor y value bajo
+        if row["rank_rec"] == summary["rank_rec"].max() and row["rank_value"] >= 3:
+            return "Inactivos/espóradicos"
+        # Estratégicos: alta contribución/alta media
+        if row["rank_value"] <= 2 and row["rank_freq"] <= 2:
+            return "Estratégicos"
+        return "Activos medios"
+
+    summary["Perfil"] = summary.apply(label_profile, axis=1)
+
+    # Colores tipo tu slide
+    color_map = {
+        "Premium / VIP": "Verde",
+        "Estratégicos": "Azul",
+        "Activos medios": "Morado",
+        "Inactivos/espóradicos": "Amarillo",
+    }
+    summary["Color"] = summary["Perfil"].map(color_map).fillna("Gris")
+
+    # Formato final parecido a tu tabla
+    out = summary[[
+        "Cluster", "Recency_media", "Frequency_media", "Value_HL_media",
+        "%_Clientes", "%_Volumen", "N_Clientes", "Perfil", "Color"
+    ]].copy()
+
+    # Redondeos
+    out["Recency_media"] = out["Recency_media"].round(2)
+    out["Frequency_media"] = out["Frequency_media"].round(2)
+    out["Value_HL_media"] = out["Value_HL_media"].round(2)
+    out["%_Clientes"] = out["%_Clientes"].round(2)
+    out["%_Volumen"] = out["%_Volumen"].round(2)
+
+    # Orden estilo “tabla ejecutiva”: Premium, Estratégicos, Activos, Inactivos
+    order = {"Premium / VIP": 0, "Estratégicos": 1, "Activos medios": 2, "Inactivos/espóradicos": 3}
+    out["__ord"] = out["Perfil"].map(order).fillna(99)
+    out = out.sort_values(["__ord", "Cluster"]).drop(columns="__ord")
+
+    return out
+
+
+def plot_kmeans_fv_scatter(rfv_clustered: pd.DataFrame, title: str = "Segmentación de clientes por K-Means (F vs V)"):
+    # Scatter Frequency vs Value (sin log para que sea entendible, como la slide)
+    fig, ax = plt.subplots(figsize=(9.5, 5.5))
+    _apply_chart_style(fig, ax, title=title, xlabel="Frecuencia (F)", ylabel="Volumen Total (V)")
+
+    sc = ax.scatter(
+        rfv_clustered["Frequency"].values,
+        rfv_clustered["Value"].values,
+        c=rfv_clustered["Cluster"].values,
+        cmap="viridis",
+        alpha=0.65,
+        s=28,
+        edgecolors="none",
+        zorder=3,
+    )
+    cb = fig.colorbar(sc, ax=ax)
+    cb.set_label("Cluster")
+
+    plt.tight_layout()
+    return fig
+
 # =============================================================================
 # HEADER
 # =============================================================================
@@ -596,8 +744,8 @@ with st.sidebar:
 # =============================================================================
 # TABS
 # =============================================================================
-tab1, tab2, tab3, tab4 = st.tabs(
-    ["📊  Resumen", "🔄  Comparación", "🔎  Detalle", "📈  Estadísticas"]
+tab1, tab2, tab3, tab4, tab5 = st.tabs(
+    ["📊  Resumen", "🔄  Comparación", "🔎  Detalle", "📈  Estadísticas", "🧩  Segmentación (K-Means)"]
 )
 
 # ── TAB 1: RESUMEN
@@ -839,6 +987,60 @@ with tab4:
             top_2025, "PRODUCTO", "VENTA_2025_EST_HL",
             f"Top {top_n} productos 2025 estimado (HL)", color="#00c07a"
         )
+
+with tab5:
+    st.markdown('<h2 class="subtitle">Segmentación de Clientes (K-Means)</h2>', unsafe_allow_html=True)
+
+    if df_base is None:
+        st.warning("No se pudo cargar el CSV base desde Drive.")
+        st.stop()
+
+    st.markdown('<div class="custom-card">', unsafe_allow_html=True)
+    st.markdown("#### ⚙️ Configuración del clustering")
+    colA, colB, colC = st.columns(3)
+    with colA:
+        year_seg = st.selectbox("Año base para segmentación", [2024, 2025, 2023], index=0)
+    with colB:
+        k = st.slider("Número de clusters (K)", min_value=2, max_value=8, value=4, step=1)
+    with colC:
+        rs = st.number_input("Random state", min_value=0, max_value=999, value=42, step=1)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # Construir RFV y KMeans
+    rfv = compute_rfv(df_base, COL_FECHA, "CODIGO_CLIENTE", COL_VOL, year=int(year_seg))
+    rfv_k = kmeans_segment_fv(rfv, k=int(k), random_state=int(rs))
+    resumen = build_cluster_summary(rfv_k)
+
+    # Layout tipo slide: gráfico arriba + tabla
+    left, right = st.columns([1.15, 1.0])
+
+    with left:
+        st.markdown('<div class="custom-card">', unsafe_allow_html=True)
+        fig = plot_kmeans_fv_scatter(rfv_k, title="Segmentación de clientes por K-Means (F vs V)")
+        show_pyplot(fig)
+        st.caption("F = número de compras (conteo). V = volumen total (HL). Colores = cluster.")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    with right:
+        st.markdown('<div class="custom-card">', unsafe_allow_html=True)
+        st.markdown("#### 📋 Resumen por cluster")
+        # Mostramos con formato tipo tu tabla
+        df_show(
+            resumen.style.format({
+                "Recency_media": "{:.2f}",
+                "Frequency_media": "{:.2f}",
+                "Value_HL_media": "{:,.2f}",
+                "%_Clientes": "{:.2f}%",
+                "%_Volumen": "{:.2f}%",
+                "N_Clientes": "{:,.0f}",
+            })
+        )
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("---")
+    st.markdown("#### 📥 Descargar segmentación")
+    out_csv = rfv_k.sort_values("Cluster").to_csv(index=False).encode("utf-8")
+    btn_download("📄 Descargar RFV + Cluster (CSV)", out_csv, "segmentacion_kmeans_rfv.csv", "text/csv")
 
 # =============================================================================
 # FOOTER
