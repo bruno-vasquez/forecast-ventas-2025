@@ -10,6 +10,10 @@ import joblib
 import matplotlib.pyplot as plt
 import gdown
 
+from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
+
 # =============================================================================
 # CONFIG DATA SOURCE (CSV EN GOOGLE DRIVE)
 # =============================================================================
@@ -29,7 +33,7 @@ st.set_page_config(
 )
 
 # =============================================================================
-# ESTILOS 
+# ESTILOS
 # =============================================================================
 st.markdown(
     """
@@ -223,24 +227,21 @@ p,span,div,label { color: var(--text-primary); }
 )
 
 # =============================================================================
-# HELPERS: compat Streamlit "width" vs "use_container_width"
+# HELPERS: compat Streamlit
 # =============================================================================
 def df_show(obj, **kwargs):
-    """st.dataframe compat: width='stretch' (nuevo) o use_container_width=True (viejo)."""
     try:
         return st.dataframe(obj, width="stretch", **kwargs)
     except TypeError:
         return st.dataframe(obj, use_container_width=True, **kwargs)
 
 def btn_download(label, data, file_name, mime, **kwargs):
-    """st.download_button compat."""
     try:
         return st.download_button(label, data, file_name=file_name, mime=mime, width="stretch", **kwargs)
     except TypeError:
         return st.download_button(label, data, file_name=file_name, mime=mime, use_container_width=True, **kwargs)
 
 def show_pyplot(fig):
-    """st.pyplot compat."""
     try:
         st.pyplot(fig, width="stretch")
     except TypeError:
@@ -286,9 +287,8 @@ PROPHET_PATH = os.path.join(MODELS_DIR, "prophet_model.joblib")
 SARIMAX_PATH = os.path.join(MODELS_DIR, "sarimax_model.joblib")
 
 # =============================================================================
-# COLUMNAS DEL CSV 
+# COLUMNAS DEL CSV (auto para mix/fechas de forecasting)
 # =============================================================================
-# Tus columnas reales incluyen FECHA_CIERRE / FECHA_SALIDA / PRODUCTO / VOLUMEN_VENDIDO_NETA
 DATE_CANDIDATES = ["FECHA_CIERRE", "FECHA_SALIDA", "FECHA"]
 PROD_CANDIDATES = ["PRODUCTO", "PRODUCTO "]
 VOL_CANDIDATES  = ["VOLUMEN_VENDIDO_NETA", "HL", "VOLUMEN_HL", "VENTA_HL"]
@@ -447,104 +447,96 @@ def plot_top_bars_dark(df_top: pd.DataFrame, x_col: str, y_col: str, title: str,
     plt.tight_layout()
     show_pyplot(fig)
 
-from sklearn.cluster import KMeans
-from sklearn.preprocessing import StandardScaler
+# =============================================================================
+# SEGMENTACIÓN (K-Means) — EXACTO A TU CÓDIGO
+# =============================================================================
+def compute_rfv_exact(df: pd.DataFrame, year: int = 2024) -> tuple[pd.DataFrame, pd.Timestamp]:
+    dfx = df.copy()
 
-def compute_rfv(df: pd.DataFrame, col_fecha: str, col_cliente: str, col_vol: str, year: int = 2024) -> pd.DataFrame:
-    dfx = df[[col_fecha, col_cliente, col_vol]].copy()
-    dfx[col_fecha] = pd.to_datetime(dfx[col_fecha], errors="coerce")
-    dfx = dfx.dropna(subset=[col_fecha, col_cliente])
+    # Asegurar tipos IGUAL A TU SCRIPT
+    dfx["FECHA_CIERRE"] = pd.to_datetime(dfx["FECHA_CIERRE"], errors="coerce")
+    dfx["FACTURA_TOTAL"] = pd.to_numeric(dfx["FACTURA_TOTAL"], errors="coerce")
+    dfx["VOLUMEN_VENDIDO_NETA"] = pd.to_numeric(dfx["VOLUMEN_VENDIDO_NETA"], errors="coerce")
 
-    dfx[col_vol] = pd.to_numeric(dfx[col_vol], errors="coerce").fillna(0)
+    # Filtrar año (tú segmentabas 2024)
+    dfx = dfx[dfx["FECHA_CIERRE"].dt.year == year].copy()
 
-    # Filtrar año base para segmentación (ej: 2024)
-    dfx = dfx[dfx[col_fecha].dt.year == year].copy()
+    # Definir fecha de referencia (último día observado en la base)
+    fecha_corte = dfx["FECHA_CIERRE"].max()
 
-    # Recency: días desde la última compra vs "fecha de corte"
-    snapshot_date = dfx[col_fecha].max() + pd.Timedelta(days=1)
-
+    # RFV por cliente (igual)
     rfv = (
-        dfx.groupby(col_cliente)
+        dfx.groupby("CODIGO_CLIENTE")
         .agg(
-            Recency=(col_fecha, lambda x: (snapshot_date - x.max()).days),
-            Frequency=(col_fecha, "count"),
-            Value=(col_vol, "sum"),
+            ULTIMA_FECHA=("FECHA_CIERRE", "max"),
+            F=("FECHA_CIERRE", "count"),
+            V=("VOLUMEN_VENDIDO_NETA", "sum"),
+            M=("FACTURA_TOTAL", "sum"),
         )
         .reset_index()
-        .rename(columns={col_cliente: "CODIGO_CLIENTE"})
     )
 
-    # Limpieza básica
-    rfv["Frequency"] = rfv["Frequency"].astype(int)
-    rfv["Recency"] = rfv["Recency"].astype(int)
-    rfv["Value"] = rfv["Value"].astype(float)
+    # Recency en días (igual)
+    rfv["R"] = (fecha_corte - rfv["ULTIMA_FECHA"]).dt.days
 
-    return rfv
+    # Limpieza (igual)
+    rfv["V"] = rfv["V"].fillna(0)
+    rfv["M"] = rfv["M"].fillna(0)
 
+    # Final (igual)
+    rfv_final = rfv[["CODIGO_CLIENTE", "R", "F", "V", "M"]].copy()
+    return rfv_final, fecha_corte
 
-def kmeans_segment_fv(rfv: pd.DataFrame, k: int = 4, random_state: int = 42) -> pd.DataFrame:
-    # KMeans sobre F y V (como tu gráfico). Log para estabilizar.
-    X = rfv[["Frequency", "Value"]].copy()
-    X["Frequency"] = np.log1p(X["Frequency"])
-    X["Value"] = np.log1p(X["Value"])
+def kmeans_rfv_exact(rfv_final: pd.DataFrame, k: int = 4, random_state: int = 42) -> tuple[pd.DataFrame, float]:
+    X = rfv_final[["R", "F", "V"]].copy()
 
     scaler = StandardScaler()
-    Xs = scaler.fit_transform(X)
+    X_scaled = scaler.fit_transform(X)
 
-    km = KMeans(n_clusters=k, n_init=10, random_state=random_state)
-    rfv = rfv.copy()
-    rfv["Cluster"] = km.fit_predict(Xs)
+    km = KMeans(n_clusters=k, random_state=random_state, n_init=10)
+    out = rfv_final.copy()
+    out["Cluster"] = km.fit_predict(X_scaled)
 
-    return rfv
+    sil = silhouette_score(X_scaled, out["Cluster"])
+    return out, float(sil)
 
-
-def build_cluster_summary(rfv_clustered: pd.DataFrame) -> pd.DataFrame:
+def build_cluster_summary_slide_style(rfv_clustered: pd.DataFrame) -> pd.DataFrame:
     dfc = rfv_clustered.copy()
 
     total_clients = dfc["CODIGO_CLIENTE"].nunique()
-    total_value = dfc["Value"].sum()
+    total_value = dfc["V"].sum()
 
     summary = (
         dfc.groupby("Cluster")
         .agg(
-            Recency_media=("Recency", "mean"),
-            Frequency_media=("Frequency", "mean"),
-            Value_HL_media=("Value", "mean"),
+            Recency_media=("R", "mean"),
+            Frequency_media=("F", "mean"),
+            Value_HL_media=("V", "mean"),
             N_Clientes=("CODIGO_CLIENTE", "nunique"),
-            Volumen_total=("Value", "sum"),
+            Volumen_total=("V", "sum"),
         )
         .reset_index()
     )
 
-    summary["%_Clientes"] = (summary["N_Clientes"] / total_clients) * 100 if total_clients else 0
-    summary["%_Volumen"] = (summary["Volumen_total"] / total_value) * 100 if total_value else 0
+    summary["%_Clientes"] = (summary["N_Clientes"] / total_clients * 100) if total_clients else 0
+    summary["%_Volumen"] = (summary["Volumen_total"] / total_value * 100) if total_value else 0
 
-    # ---- Perfiles (reglas simples, pero efectivas) ----
-    # Premium/VIP: baja recency, muy alta freq y value
-    # Estratégicos: alto value total o alto freq/value
-    # Activos medios: mayoría con métricas medias
-    # Inactivos/esp.: alta recency y bajo F/V
-
-    # Rankings para asignar perfiles robustos
+    # Perfil (reglas simples para que salga tipo slide)
     summary["rank_value"] = summary["Value_HL_media"].rank(ascending=False, method="dense")
     summary["rank_freq"] = summary["Frequency_media"].rank(ascending=False, method="dense")
     summary["rank_rec"] = summary["Recency_media"].rank(ascending=True, method="dense")  # menor recency = mejor
 
     def label_profile(row):
-        # Premium: top en value y freq + buena recency
         if row["rank_value"] == 1 and row["rank_freq"] == 1:
             return "Premium / VIP"
-        # Inactivos: recency peor y value bajo
         if row["rank_rec"] == summary["rank_rec"].max() and row["rank_value"] >= 3:
             return "Inactivos/espóradicos"
-        # Estratégicos: alta contribución/alta media
         if row["rank_value"] <= 2 and row["rank_freq"] <= 2:
             return "Estratégicos"
         return "Activos medios"
 
     summary["Perfil"] = summary.apply(label_profile, axis=1)
 
-    # Colores tipo tu slide
     color_map = {
         "Premium / VIP": "Verde",
         "Estratégicos": "Azul",
@@ -553,7 +545,6 @@ def build_cluster_summary(rfv_clustered: pd.DataFrame) -> pd.DataFrame:
     }
     summary["Color"] = summary["Perfil"].map(color_map).fillna("Gris")
 
-    # Formato final parecido a tu tabla
     out = summary[[
         "Cluster", "Recency_media", "Frequency_media", "Value_HL_media",
         "%_Clientes", "%_Volumen", "N_Clientes", "Perfil", "Color"
@@ -566,22 +557,20 @@ def build_cluster_summary(rfv_clustered: pd.DataFrame) -> pd.DataFrame:
     out["%_Clientes"] = out["%_Clientes"].round(2)
     out["%_Volumen"] = out["%_Volumen"].round(2)
 
-    # Orden estilo “tabla ejecutiva”: Premium, Estratégicos, Activos, Inactivos
+    # Orden: Premium, Estratégicos, Activos, Inactivos
     order = {"Premium / VIP": 0, "Estratégicos": 1, "Activos medios": 2, "Inactivos/espóradicos": 3}
     out["__ord"] = out["Perfil"].map(order).fillna(99)
     out = out.sort_values(["__ord", "Cluster"]).drop(columns="__ord")
 
     return out
 
-
 def plot_kmeans_fv_scatter(rfv_clustered: pd.DataFrame, title: str = "Segmentación de clientes por K-Means (F vs V)"):
-    # Scatter Frequency vs Value (sin log para que sea entendible, como la slide)
     fig, ax = plt.subplots(figsize=(9.5, 5.5))
     _apply_chart_style(fig, ax, title=title, xlabel="Frecuencia (F)", ylabel="Volumen Total (V)")
 
     sc = ax.scatter(
-        rfv_clustered["Frequency"].values,
-        rfv_clustered["Value"].values,
+        rfv_clustered["F"].values,
+        rfv_clustered["V"].values,
         c=rfv_clustered["Cluster"].values,
         cmap="viridis",
         alpha=0.65,
@@ -605,7 +594,7 @@ st.markdown(
 )
 
 # =============================================================================
-# SIDEBAR (SOLO CONFIG QUE NO DEPENDE DE pred_prophet)
+# SIDEBAR
 # =============================================================================
 with st.sidebar:
     st.markdown("### ⚙️ Configuración")
@@ -642,7 +631,7 @@ except Exception as e:
     st.error(f"No pude descargar/leer el CSV desde Drive: {e}")
     df_base = None
 
-# Resolver columnas reales del CSV (IMPORTANTÍSIMO para evitar KeyError FECHA)
+# Resolver columnas para mix (pero segmentación usará columnas fijas)
 if df_base is not None:
     COL_FECHA = pick_existing(df_base, DATE_CANDIDATES, "Fecha")
     COL_PRODUCTO = pick_existing(df_base, PROD_CANDIDATES, "Producto")
@@ -698,7 +687,6 @@ with st.spinner("🔄 Cargando modelos desde el repositorio…"):
     low_s = pd.Series(np.asarray(ci_s.iloc[:, 0]), index=dates_2025)
     up_s = pd.Series(np.asarray(ci_s.iloc[:, 1]), index=dates_2025)
 
-    # Ceros operativos
     pred_prophet = apply_operational_zeros(pred_prophet, FERIADOS_2025)
     pred_sarimax = apply_operational_zeros(pred_sarimax, FERIADOS_2025)
     low_p = apply_operational_zeros(low_p, FERIADOS_2025)
@@ -706,7 +694,6 @@ with st.spinner("🔄 Cargando modelos desde el repositorio…"):
     low_s = apply_operational_zeros(low_s, FERIADOS_2025)
     up_s = apply_operational_zeros(up_s, FERIADOS_2025)
 
-    # Vistas
     p_view = resample_view(pred_prophet, vista)
     s_view = resample_view(pred_sarimax, vista)
     lp_view = resample_view(low_p, vista)
@@ -720,7 +707,7 @@ with st.spinner("🔄 Cargando modelos desde el repositorio…"):
         ls_view, us_view = ls_view.cumsum(), us_view.cumsum()
 
 # =============================================================================
-# SIDEBAR: TOP PRODUCTOS (AHORA SÍ, DESPUÉS DE pred_prophet) + FIX value repetido
+# SIDEBAR: TOP PRODUCTOS
 # =============================================================================
 with st.sidebar:
     st.markdown("---")
@@ -748,7 +735,7 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs(
     ["📊  Resumen", "🔄  Comparación", "🔎  Detalle", "📈  Estadísticas", "🧩  Segmentación (K-Means)"]
 )
 
-# ── TAB 1: RESUMEN
+# ── TAB 1
 with tab1:
     st.markdown('<h2 class="subtitle">Resumen Ejecutivo</h2>', unsafe_allow_html=True)
 
@@ -824,7 +811,7 @@ with tab1:
     plt.tight_layout()
     show_pyplot(fig)
 
-# ── TAB 2: COMPARACIÓN
+# ── TAB 2
 with tab2:
     st.markdown('<h2 class="subtitle">Comparación Detallada</h2>', unsafe_allow_html=True)
 
@@ -877,7 +864,7 @@ with tab2:
     plt.tight_layout()
     show_pyplot(fig)
 
-# ── TAB 3: DETALLE
+# ── TAB 3
 with tab3:
     st.markdown('<h2 class="subtitle">Detalle por Modelo</h2>', unsafe_allow_html=True)
 
@@ -915,7 +902,7 @@ with tab3:
         show_pyplot(fig)
         st.markdown("</div>", unsafe_allow_html=True)
 
-# ── TAB 4: ESTADÍSTICAS + MIX PRODUCTOS
+# ── TAB 4
 with tab4:
     st.markdown('<h2 class="subtitle">Análisis Estadístico</h2>', unsafe_allow_html=True)
     st.markdown('<h2 class="subtitle">Top productos 2024 (real) y 2025 (estimado por mix 2024)</h2>', unsafe_allow_html=True)
@@ -951,7 +938,6 @@ with tab4:
 
     st.markdown("<hr/>", unsafe_allow_html=True)
 
-    # Mezcla 2024 (usa tus columnas reales auto-detectadas)
     mix_2024, total_2024 = build_mix_producto_2024(df_base, COL_FECHA, COL_PRODUCTO, COL_VOL, year=2024)
     fc_2025 = forecast_by_mix(mix_2024, TOTAL_2025_FORECAST)
 
@@ -988,6 +974,7 @@ with tab4:
             f"Top {top_n} productos 2025 estimado (HL)", color="#00c07a"
         )
 
+# ── TAB 5: SEGMENTACIÓN
 with tab5:
     st.markdown('<h2 class="subtitle">Segmentación de Clientes (K-Means)</h2>', unsafe_allow_html=True)
 
@@ -995,23 +982,31 @@ with tab5:
         st.warning("No se pudo cargar el CSV base desde Drive.")
         st.stop()
 
+    # Verificación: si faltan columnas clave, paramos (para no “inventar”)
+    required_cols = {"FECHA_CIERRE", "CODIGO_CLIENTE", "VOLUMEN_VENDIDO_NETA", "FACTURA_TOTAL"}
+    missing = [c for c in required_cols if c not in df_base.columns]
+    if missing:
+        st.error(f"Faltan columnas necesarias para segmentación EXACTA: {missing}")
+        st.write("Columnas detectadas:", list(df_base.columns))
+        st.stop()
+
     st.markdown('<div class="custom-card">', unsafe_allow_html=True)
-    st.markdown("#### ⚙️ Configuración del clustering")
+    st.markdown("#### ⚙️ Configuración del clustering (igual a tu script)")
     colA, colB, colC = st.columns(3)
     with colA:
-        year_seg = st.selectbox("Año base para segmentación", [2024, 2025, 2023], index=0)
+        year_seg = st.selectbox("Año base para segmentación", [2024, 2023, 2025], index=0)
     with colB:
         k = st.slider("Número de clusters (K)", min_value=2, max_value=8, value=4, step=1)
     with colC:
         rs = st.number_input("Random state", min_value=0, max_value=999, value=42, step=1)
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # Construir RFV y KMeans
-    rfv = compute_rfv(df_base, COL_FECHA, "CODIGO_CLIENTE", COL_VOL, year=int(year_seg))
-    rfv_k = kmeans_segment_fv(rfv, k=int(k), random_state=int(rs))
-    resumen = build_cluster_summary(rfv_k)
+    rfv_final, fecha_corte = compute_rfv_exact(df_base, year=int(year_seg))
+    rfv_k, sil = kmeans_rfv_exact(rfv_final, k=int(k), random_state=int(rs))
+    resumen = build_cluster_summary_slide_style(rfv_k)
 
-    # Layout tipo slide: gráfico arriba + tabla
+    st.caption(f"Fecha corte usada: {fecha_corte.date()}  |  Silhouette: {sil:.3f}")
+
     left, right = st.columns([1.15, 1.0])
 
     with left:
@@ -1023,8 +1018,7 @@ with tab5:
 
     with right:
         st.markdown('<div class="custom-card">', unsafe_allow_html=True)
-        st.markdown("#### 📋 Resumen por cluster")
-        # Mostramos con formato tipo tu tabla
+        st.markdown("#### 📋 Resumen por cluster (estilo slide)")
         df_show(
             resumen.style.format({
                 "Recency_media": "{:.2f}",
@@ -1043,7 +1037,7 @@ with tab5:
     btn_download("📄 Descargar RFV + Cluster (CSV)", out_csv, "segmentacion_kmeans_rfv.csv", "text/csv")
 
 # =============================================================================
-# FOOTER
+# FOOTER (sin 's' suelta)
 # =============================================================================
 st.markdown(
     """
