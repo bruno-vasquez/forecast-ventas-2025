@@ -999,6 +999,9 @@ with tab5:
     rfv_k, sil = kmeans_rfv_exact(rfv_final, k=int(k), random_state=int(rs))
     resumen = build_cluster_summary_slide_style(rfv_k)
 
+
+    left, right = st.columns([1.15, 1.0])
+
     with left:
         st.markdown('<div class="custom-card">', unsafe_allow_html=True)
         fig = plot_kmeans_fv_scatter(rfv_k, title="Segmentación de clientes por K-Means (F vs V)")
