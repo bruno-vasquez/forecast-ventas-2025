@@ -2,7 +2,6 @@ streamlit
 pandas
 numpy
 matplotlib
-seaborn
 joblib
 openpyxl
 prophet
@@ -10,3 +9,4 @@ statsmodels
 scipy
 gdown
 scikit-learn
+cmdstanpy

@@ -990,24 +990,14 @@ with tab5:
         st.write("Columnas detectadas:", list(df_base.columns))
         st.stop()
 
-    st.markdown('<div class="custom-card">', unsafe_allow_html=True)
-    st.markdown("#### ⚙️ Configuración del clustering (igual a tu script)")
-    colA, colB, colC = st.columns(3)
-    with colA:
-        year_seg = st.selectbox("Año base para segmentación", [2024, 2023, 2025], index=0)
-    with colB:
-        k = st.slider("Número de clusters (K)", min_value=2, max_value=8, value=4, step=1)
-    with colC:
-        rs = st.number_input("Random state", min_value=0, max_value=999, value=42, step=1)
-    st.markdown("</div>", unsafe_allow_html=True)
+    # Parámetros FIJOS (como en tu script original)
+    year_seg = 2024
+    k = 4
+    rs = 42
 
     rfv_final, fecha_corte = compute_rfv_exact(df_base, year=int(year_seg))
     rfv_k, sil = kmeans_rfv_exact(rfv_final, k=int(k), random_state=int(rs))
     resumen = build_cluster_summary_slide_style(rfv_k)
-
-    st.caption(f"Fecha corte usada: {fecha_corte.date()}  |  Silhouette: {sil:.3f}")
-
-    left, right = st.columns([1.15, 1.0])
 
     with left:
         st.markdown('<div class="custom-card">', unsafe_allow_html=True)
