@@ -8,7 +8,35 @@ import numpy as np
 import joblib
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+import gdown
 
+DRIVE_FILE_ID = "1xxvsoHcjpkG6uvPfFq82EZNbr2MlOWLI"
+CSV_LOCAL_PATH = os.path.join("/tmp", "CBN_Cochabamba_2024_LIMPIO.csv")
+
+@st.cache_data(show_spinner=False)
+def ensure_csv_from_drive(file_id: str, local_path: str) -> str:
+    """
+    Descarga el CSV desde Google Drive a un path local (Streamlit Cloud),
+    y devuelve el path local. Cacheado para no descargar en cada rerun.
+    """
+    if os.path.exists(local_path) and os.path.getsize(local_path) > 0:
+        return local_path
+
+    url = f"https://drive.google.com/uc?id={file_id}"
+    # quiet=False para logs en consola; en Streamlit mantenlo True para no ensuciar UI
+    gdown.download(url, local_path, quiet=True)
+    return local_path
+
+@st.cache_data(show_spinner=False)
+def load_base_csv_from_drive(file_id: str) -> pd.DataFrame:
+    path = ensure_csv_from_drive(file_id, CSV_LOCAL_PATH)
+    # Intenta normal, si falla intenta ; (por si acaso)
+    try:
+        df = pd.read_csv(path)
+    except Exception:
+        df = pd.read_csv(path, sep=";")
+    df.columns = [c.strip() for c in df.columns]
+    return df
 
 # Config
 st.set_page_config(
@@ -506,7 +534,12 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODELS_DIR = os.path.join(BASE_DIR, "modelos")
 PROPHET_PATH = os.path.join(MODELS_DIR, "prophet_model.joblib")
 SARIMAX_PATH = os.path.join(MODELS_DIR, "sarimax_model.joblib")
+with st.spinner("📥 Descargando CSV base desde Google Drive (solo la primera vez)…"):
+    df_base = load_base_csv_from_drive(DRIVE_FILE_ID)
 
+
+# Si lo tienes en la misma carpeta que app.py, usa:
+# CSV_BASE_PATH = os.path.join(BASE_DIR, "CBN_Cochabamba_2024_LIMPIO.csv")
 # Feriados 2025
 FERIADOS_2025 = pd.to_datetime(
     [
@@ -607,6 +640,56 @@ def plot_with_ci(index, mean, low=None, up=None, title="", color="#3d5cff"):
     plt.tight_layout()
     return fig
 
+def build_mix_producto_2024(df: pd.DataFrame, col_fecha: str, col_producto: str, col_vol: str, year: int = 2024):
+    dfx = df.copy()
+    dfx[col_fecha] = pd.to_datetime(dfx[col_fecha], errors="coerce")
+    dfx = dfx.dropna(subset=[col_fecha, col_producto])
+
+    dfx[col_producto] = dfx[col_producto].astype(str).str.strip()
+    dfx = dfx[dfx[col_producto] != ""]
+
+    dfx[col_vol] = pd.to_numeric(dfx[col_vol], errors="coerce").fillna(0)
+
+    dfy = dfx[dfx[col_fecha].dt.year == year].copy()
+    total_year = float(dfy[col_vol].sum())
+
+    mix = (
+        dfy.groupby([col_producto], as_index=False)[col_vol]
+        .sum()
+        .rename(columns={col_producto: "PRODUCTO", col_vol: f"VENTA_{year}_HL"})
+    )
+    mix["PARTICIPACION_%"] = (mix[f"VENTA_{year}_HL"] / total_year) if total_year > 0 else 0.0
+    mix = mix.sort_values(f"VENTA_{year}_HL", ascending=False)
+    return mix, total_year
+
+
+def forecast_by_mix(mix_df: pd.DataFrame, total_2025_forecast: float):
+    out = mix_df.copy()
+    out["VENTA_2025_EST_HL"] = out["PARTICIPACION_%"] * float(total_2025_forecast)
+    out = out.sort_values("VENTA_2025_EST_HL", ascending=False)
+    return out
+
+
+def plot_top_bars_dark(df_top: pd.DataFrame, x_col: str, y_col: str, title: str, color: str):
+    # 🔥 más grande + horizontal + estilo consistente con tus charts
+    fig, ax = plt.subplots(figsize=(16, 7.2))
+    fg, _ = _apply_chart_style(fig, ax, title=title, xlabel="Volumen (HL)", ylabel="")
+
+    # Orden top arriba
+    d = df_top.iloc[::-1].copy()
+    ax.barh(d[x_col].astype(str), d[y_col].astype(float), color=color, alpha=0.90)
+
+    ax.tick_params(axis="y", labelsize=10, colors=fg)
+    ax.tick_params(axis="x", labelsize=10, colors=fg)
+
+    # Etiquetas al final de cada barra
+    maxv = float(d[y_col].max()) if len(d) else 0.0
+    pad = maxv * 0.01 if maxv > 0 else 0.0
+    for i, v in enumerate(d[y_col].astype(float).values):
+        ax.text(v + pad, i, f"{v:,.0f}", va="center", ha="left", color=fg, fontsize=10, fontweight="700")
+
+    plt.tight_layout()
+    st.pyplot(fig, use_container_width=True)
 
 # ─── HEADER ────────────────────────────────────────────────────────────────
 st.markdown('<h1 class="main-title">📈 Forecast de Ventas 2025</h1>', unsafe_allow_html=True)
@@ -644,6 +727,24 @@ if pd.to_datetime(end_date) < pd.to_datetime(start_date):
 dates_2025 = pd.date_range("2025-01-01", "2025-12-31", freq="D")
 mask_range = (dates_2025 >= pd.to_datetime(start_date)) & (dates_2025 <= pd.to_datetime(end_date))
 dates_view = dates_2025[mask_range]
+
+st.markdown("---")
+st.markdown('<div class="sidebar-section">🛒 Top productos</div>', unsafe_allow_html=True)
+
+top_n = st.slider("Top N", min_value=5, max_value=30, value=10, step=1)
+
+base_total_2025 = st.selectbox(
+    "Total 2025 para repartir por mix",
+    ["Prophet", "SARIMAX", "Promedio", "Manual"],
+    index=0
+)
+
+total_2025_manual = st.number_input(
+    "Total 2025 manual (HL)",
+    min_value=0.0,
+    value=float(pred_prophet.sum()),
+    step=1000.0
+)
 
 # ─── LOAD & PREDICT ────────────────────────────────────────────────────────
 with st.spinner("🔄 Cargando modelos desde el repositorio…"):
@@ -904,6 +1005,82 @@ with tab3:
 with tab4:
     st.markdown('<h2 class="subtitle">Análisis Estadístico</h2>', unsafe_allow_html=True)
 
+    st.markdown('<h2 class="subtitle">Top productos 2024 (real) y 2025 (estimado por mix 2024)</h2>', unsafe_allow_html=True)
+
+if df_base is None:
+    st.warning("No se encontró el CSV limpio en el proyecto. Colócalo en /data/CBN_Cochabamba_2024_LIMPIO.csv")
+else:
+    total_2025_prophet = float(pred_prophet.sum())
+    total_2025_sarimax = float(pred_sarimax.sum())
+
+    if base_total_2025 == "Prophet":
+        TOTAL_2025_FORECAST = total_2025_prophet
+        base_badge = '<span class="badge badge-prophet">Base: Prophet</span>'
+    elif base_total_2025 == "SARIMAX":
+        TOTAL_2025_FORECAST = total_2025_sarimax
+        base_badge = '<span class="badge badge-sarimax">Base: SARIMAX</span>'
+    elif base_total_2025 == "Promedio":
+        TOTAL_2025_FORECAST = (total_2025_prophet + total_2025_sarimax) / 2.0
+        base_badge = '<span class="badge">Base: Promedio</span>'
+    else:
+        TOTAL_2025_FORECAST = float(total_2025_manual)
+        base_badge = '<span class="badge">Base: Manual</span>'
+
+    # KPI cards con tu estilo
+    k1, k2, k3 = st.columns(3)
+    with k1:
+        st.metric("Total 2025 usado (mix)", f"{TOTAL_2025_FORECAST:,.0f} HL")
+        st.markdown(base_badge, unsafe_allow_html=True)
+    with k2:
+        st.metric("Total 2025 Prophet", f"{total_2025_prophet:,.0f} HL")
+    with k3:
+        st.metric("Total 2025 SARIMAX", f"{total_2025_sarimax:,.0f} HL")
+
+    st.markdown("<hr/>", unsafe_allow_html=True)
+
+    mix_2024, total_2024 = build_mix_producto_2024(df_base, COL_FECHA, COL_PRODUCTO, COL_VOL, year=2024)
+    fc_2025 = forecast_by_mix(mix_2024, TOTAL_2025_FORECAST)
+
+    left, right = st.columns(2)
+
+    with left:
+        st.markdown('<div class="custom-card">', unsafe_allow_html=True)
+        st.markdown("#### 📌 Top productos 2024 (real)")
+        st.caption(f"Total 2024 (HL): {total_2024:,.0f}")
+        top_2024 = mix_2024.head(top_n).copy()
+        st.dataframe(
+            top_2024[["PRODUCTO", "VENTA_2024_HL", "PARTICIPACION_%"]]
+            .style.format({"VENTA_2024_HL": "{:,.2f}", "PARTICIPACION_%": "{:.4%}"}),
+            use_container_width=True
+        )
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        # 🔥 gráfico grande
+        plot_top_bars_dark(
+            top_2024, "PRODUCTO", "VENTA_2024_HL",
+            f"Top {top_n} productos 2024 (HL)", color="#3d5cff"
+        )
+
+    with right:
+        st.markdown('<div class="custom-card">', unsafe_allow_html=True)
+        st.markdown("#### 📌 Top productos 2025 (estimado por mix 2024)")
+        top_2025 = fc_2025.head(top_n).copy()
+        st.dataframe(
+            top_2025[["PRODUCTO", "PARTICIPACION_%", "VENTA_2025_EST_HL"]]
+            .style.format({"PARTICIPACION_%": "{:.4%}", "VENTA_2025_EST_HL": "{:,.2f}"}),
+            use_container_width=True
+        )
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        # 🔥 gráfico grande
+        plot_top_bars_dark(
+            top_2025, "PRODUCTO", "VENTA_2025_EST_HL",
+            f"Top {top_n} productos 2025 estimado (HL)", color="#00c07a"
+        )
+
+    st.markdown("<hr/>", unsafe_allow_html=True)
+    st.caption("Nota: La estimación 2025 asume que la participación (mix) de productos de 2024 se mantiene en 2025.")
+    
     p = pd.Series(pred_prophet.values, index=pred_prophet.index)
     s = pd.Series(pred_sarimax.values, index=pred_sarimax.index)
 
