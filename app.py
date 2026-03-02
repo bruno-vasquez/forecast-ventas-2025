@@ -840,19 +840,6 @@ with tab4:
             f"Top {top_n} productos 2025 estimado (HL)", color="#00c07a"
         )
 
-    st.markdown("<hr/>", unsafe_allow_html=True)
-    st.caption("Nota: La estimación 2025 asume que el mix de productos de 2024 se mantiene en 2025.")
-
-    p = pd.Series(pred_prophet.values, index=pred_prophet.index)
-    s = pd.Series(pred_sarimax.values, index=pred_sarimax.index)
-
-    stats_df = pd.DataFrame({
-        "Métrica": ["Media", "Mediana", "Desv. Est.", "Mínimo", "Máximo", "Q1", "Q3"],
-        "Prophet": [p.mean(), p.median(), p.std(), p.min(), p.max(), p.quantile(0.25), p.quantile(0.75)],
-        "SARIMAX": [s.mean(), s.median(), s.std(), s.min(), s.max(), s.quantile(0.25), s.quantile(0.75)],
-    })
-    df_show(stats_df.style.format({"Prophet": "{:.2f}", "SARIMAX": "{:.2f}"}))
-
 # =============================================================================
 # FOOTER
 # =============================================================================
