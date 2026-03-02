@@ -413,7 +413,7 @@ def plot_top_bars_dark(df_top: pd.DataFrame, x_col: str, y_col: str, title: str,
         ax.text(v + pad, i, f"{v:,.0f}", va="center", ha="left", color=fg, fontsize=10, fontweight="700")
 
     plt.tight_layout()
-    st.pyplot(fig, use_container_width=True)
+    st.pyplot(fig, width=True)
 
 # =============================================================================
 # HEADER
@@ -547,12 +547,11 @@ with st.sidebar:
     )
 
     total_2025_manual = st.number_input(
-        "Total 2025 manual (HL)",
-        value=0.0,
-        min_value=0.0,
-        value=float(pred_prophet.sum()),
-        step=1000.0
-    )
+    "Total 2025 manual (HL)",
+    min_value=0.0,
+    value=float(pred_prophet.sum()),
+    step=1000.0
+)
 
 # =============================================================================
 # TABS
@@ -693,21 +692,21 @@ with tab2:
     st.markdown("---")
     st.markdown("#### 📅 Resumen Mensual")
     mensual = df_compare.resample("MS").sum()
-    st.dataframe(mensual.style.format("{:,.0f}"), use_container_width="stretch")
+    st.dataframe(mensual.style.format("{:,.0f}"), width="stretch")
 
     st.markdown("---")
     col1, col2 = st.columns(2)
 
     with col1:
         csv = df_compare.reset_index().rename(columns={"index": "fecha"}).to_csv(index=False).encode("utf-8")
-        st.download_button("📄 Descargar CSV", csv, "forecast_2025.csv", "text/csv", use_container_width="stretch")
+        st.download_button("📄 Descargar CSV", csv, "forecast_2025.csv", "text/csv", width="stretch")
 
     with col2:
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine="openpyxl") as writer:
             df_compare.reset_index().rename(columns={"index": "fecha"}).to_excel(writer, sheet_name="Diario", index=False)
             mensual.reset_index().rename(columns={"index": "mes"}).to_excel(writer, sheet_name="Mensual", index=False)
-        st.download_button("📊 Descargar Excel", output.getvalue(), "forecast_2025.xlsx", use_container_width="stretch")
+        st.download_button("📊 Descargar Excel", output.getvalue(), "forecast_2025.xlsx", width="stretch")
 
 # ── TAB 3: DETALLE
 with tab3:
@@ -796,7 +795,7 @@ else:
         st.dataframe(
             top_2024[["PRODUCTO", "VENTA_2024_HL", "PARTICIPACION_%"]]
             .style.format({"VENTA_2024_HL": "{:,.2f}", "PARTICIPACION_%": "{:.4%}"}),
-            use_container_width="stretch"
+            width="stretch"
         )
         st.markdown("</div>", unsafe_allow_html=True)
 
@@ -812,7 +811,7 @@ else:
         st.dataframe(
             top_2025[["PRODUCTO", "PARTICIPACION_%", "VENTA_2025_EST_HL"]]
             .style.format({"PARTICIPACION_%": "{:.4%}", "VENTA_2025_EST_HL": "{:,.2f}"}),
-            use_container_width="stretch"
+            width="stretch"
         )
         st.markdown("</div>", unsafe_allow_html=True)
 
@@ -832,7 +831,7 @@ else:
         "Prophet": [p.mean(), p.median(), p.std(), p.min(), p.max(), p.quantile(0.25), p.quantile(0.75)],
         "SARIMAX": [s.mean(), s.median(), s.std(), s.min(), s.max(), s.quantile(0.25), s.quantile(0.75)],
     })
-    st.dataframe(stats_df.style.format({"Prophet": "{:.2f}", "SARIMAX": "{:.2f}"}), use_container_width="stretch")
+    st.dataframe(stats_df.style.format({"Prophet": "{:.2f}", "SARIMAX": "{:.2f}"}), width="stretch")
 
     st.markdown("---")
     col1, col2 = st.columns(2)
