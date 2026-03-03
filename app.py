@@ -635,8 +635,7 @@ with st.sidebar:
     mostrar_resumen_mensual = st.checkbox("Mostrar tabla resumen mensual", value=True)
 
     st.markdown("---")
-    st.markdown('<div class="sidebar-section">🛒 Top productos</div>', unsafe_allow_html=True)
-
+    st.markdown("### 🛒 Configuración Top productos")
     max_prod_ui = 80
     top_n = st.slider("Top N", min_value=5, max_value=max_prod_ui, value=10, step=1)
 
@@ -963,7 +962,7 @@ with tab4:
         st.stop()
 
     total_2025_prophet = float(pred_prophet.sum())
-    total_2025_sarimax = float(pred_sarimax.sum())
+    total_2025_sarimax  = float(pred_sarimax.sum())
 
     if base_total_2025 == "Prophet":
         TOTAL_2025_FORECAST = total_2025_prophet
@@ -978,6 +977,22 @@ with tab4:
         TOTAL_2025_FORECAST = float(total_2025_manual)
         base_badge = '<span class="badge">Base: Manual</span>'
 
+    # -------------------------------------------------------------------------
+    # ✅ CONTROL TOP-N (DINÁMICO) — EN EL TAB (como lo mostraste)
+    # -------------------------------------------------------------------------
+    st.markdown("---")
+    st.markdown("### 🛒 Configuración Top productos")
+    top_n = st.slider(
+        "Top N (productos a mostrar)",
+        min_value=5,
+        max_value=80,  # ajusta si quieres
+        value=10,
+        step=1
+    )
+
+    # -------------------------------------------------------------------------
+    # KPIs
+    # -------------------------------------------------------------------------
     k1, k2, k3 = st.columns(3)
     with k1:
         st.metric("Total 2025 usado (mix)", f"{TOTAL_2025_FORECAST:,.0f} HL")
@@ -989,19 +1004,29 @@ with tab4:
 
     st.markdown("<hr/>", unsafe_allow_html=True)
 
-    mix_2024, total_2024 = build_mix_producto_2024(df_base, COL_FECHA, COL_PRODUCTO, COL_VOL, year=2024)
+    # -------------------------------------------------------------------------
+    # MIX 2024 y FORECAST 2025 por mix
+    # -------------------------------------------------------------------------
+    mix_2024, total_2024 = build_mix_producto_2024(
+        df_base, COL_FECHA, COL_PRODUCTO, COL_VOL, year=2024
+    )
     fc_2025 = forecast_by_mix(mix_2024, TOTAL_2025_FORECAST)
 
-    # ✅ dinámico y seguro (si pides más de lo que existe)
+    # ✅ dinámico y seguro
     top_n_eff = int(min(top_n, len(mix_2024)))
 
     left, right = st.columns(2)
 
+    # -------------------------------------------------------------------------
+    # 2024 REAL
+    # -------------------------------------------------------------------------
     with left:
         st.markdown('<div class="custom-card">', unsafe_allow_html=True)
         st.markdown("#### 📌 Top productos 2024 (real)")
         st.caption(f"Total 2024 (HL): {total_2024:,.0f}")
+
         top_2024 = mix_2024.head(top_n_eff).copy()
+
         df_show(
             top_2024[["PRODUCTO", "VENTA_2024_HL", "PARTICIPACION_%"]]
             .style.format({"VENTA_2024_HL": "{:,.2f}", "PARTICIPACION_%": "{:.4%}"})
@@ -1009,14 +1034,22 @@ with tab4:
         st.markdown("</div>", unsafe_allow_html=True)
 
         plot_top_bars_dark(
-            top_2024, "PRODUCTO", "VENTA_2024_HL",
-            f"Top {top_n_eff} productos 2024 (HL)", color="#3d5cff"
+            top_2024,
+            "PRODUCTO",
+            "VENTA_2024_HL",
+            f"Top {top_n_eff} productos 2024 (HL)",
+            color="#3d5cff",
         )
 
+    # -------------------------------------------------------------------------
+    # 2025 ESTIMADO
+    # -------------------------------------------------------------------------
     with right:
         st.markdown('<div class="custom-card">', unsafe_allow_html=True)
         st.markdown("#### 📌 Top productos 2025 (estimado por mix 2024)")
+
         top_2025 = fc_2025.head(top_n_eff).copy()
+
         df_show(
             top_2025[["PRODUCTO", "PARTICIPACION_%", "VENTA_2025_EST_HL"]]
             .style.format({"PARTICIPACION_%": "{:.4%}", "VENTA_2025_EST_HL": "{:,.2f}"})
@@ -1024,8 +1057,11 @@ with tab4:
         st.markdown("</div>", unsafe_allow_html=True)
 
         plot_top_bars_dark(
-            top_2025, "PRODUCTO", "VENTA_2025_EST_HL",
-            f"Top {top_n_eff} productos 2025 estimado (HL)", color="#00c07a"
+            top_2025,
+            "PRODUCTO",
+            "VENTA_2025_EST_HL",
+            f"Top {top_n_eff} productos 2025 estimado (HL)",
+            color="#00c07a",
         )
 
 # ── TAB 5: SEGMENTACIÓN
