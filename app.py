@@ -255,10 +255,10 @@ def dfs_to_excel_bytes(sheets: dict[str, pd.DataFrame]) -> bytes:
     retorna bytes listos para st.download_button
     """
     output = io.BytesIO()
-    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+    # openpyxl para evitar error en deploy (xlsxwriter no siempre está)
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
         for name, df in sheets.items():
-            df_to_save = df.copy()
-            df_to_save.to_excel(writer, sheet_name=name[:31], index=False)  # Excel max 31 chars
+            df.copy().to_excel(writer, sheet_name=name[:31], index=False)
     output.seek(0)
     return output.read()
 
@@ -607,7 +607,7 @@ st.markdown(
 )
 
 # =============================================================================
-# SIDEBAR (Config principal)
+# SIDEBAR
 # =============================================================================
 with st.sidebar:
     st.markdown("### ⚙️ Configuración")
@@ -629,6 +629,29 @@ with st.sidebar:
 
     st.markdown("---")
     st.caption("ℹ️ Ceros operativos (domingos / feriados) activados por defecto.")
+
+    st.markdown("---")
+    st.markdown('<div class="sidebar-section">🧾 Comparación</div>', unsafe_allow_html=True)
+    mostrar_resumen_mensual = st.checkbox("Mostrar tabla resumen mensual", value=True)
+
+    st.markdown("---")
+    st.markdown('<div class="sidebar-section">🛒 Top productos</div>', unsafe_allow_html=True)
+
+    max_prod_ui = 80
+    top_n = st.slider("Top N", min_value=5, max_value=max_prod_ui, value=10, step=1)
+
+    base_total_2025 = st.selectbox(
+        "Total 2025 para repartir por mix",
+        ["Prophet", "SARIMAX", "Promedio", "Manual"],
+        index=0
+    )
+
+    total_2025_manual = st.number_input(
+        "Total 2025 manual (HL)",
+        min_value=0.0,
+        value=0.0,
+        step=1000.0
+    )
 
 if pd.to_datetime(end_date) < pd.to_datetime(start_date):
     st.error("⚠️ Rango inválido: la fecha de inicio debe ser anterior a la fecha de fin.")
@@ -686,7 +709,6 @@ with st.spinner("🔄 Cargando modelos desde el repositorio…"):
     exog_2025 = pd.DataFrame(index=dates_2025)
     exog_2025["ES_FERIADO_ANTICIPADO"] = build_feriado_anticipado(exog_2025.index, FERIADOS_2025, anticipacion_dias).values
 
-    # Prophet
     future = pd.DataFrame({"ds": dates_2025})
     future["ES_FERIADO_ANTICIPADO"] = exog_2025["ES_FERIADO_ANTICIPADO"].values
     fc_p = prophet_model.predict(future)
@@ -695,14 +717,12 @@ with st.spinner("🔄 Cargando modelos desde el repositorio…"):
     low_p = pd.Series(fc_p["yhat_lower"].values, index=dates_2025)
     up_p = pd.Series(fc_p["yhat_upper"].values, index=dates_2025)
 
-    # SARIMAX
     fc_s = sarimax_model.get_forecast(steps=len(exog_2025), exog=exog_2025)
     pred_sarimax = pd.Series(np.asarray(fc_s.predicted_mean), index=dates_2025)
     ci_s = fc_s.conf_int()
     low_s = pd.Series(np.asarray(ci_s.iloc[:, 0]), index=dates_2025)
     up_s = pd.Series(np.asarray(ci_s.iloc[:, 1]), index=dates_2025)
 
-    # Ceros operativos + no negativos
     pred_prophet = apply_operational_zeros(pred_prophet, FERIADOS_2025)
     pred_sarimax = apply_operational_zeros(pred_sarimax, FERIADOS_2025)
     low_p = apply_operational_zeros(low_p, FERIADOS_2025)
@@ -710,7 +730,6 @@ with st.spinner("🔄 Cargando modelos desde el repositorio…"):
     low_s = apply_operational_zeros(low_s, FERIADOS_2025)
     up_s = apply_operational_zeros(up_s, FERIADOS_2025)
 
-    # Views
     p_view = resample_view(pred_prophet, vista)
     s_view = resample_view(pred_sarimax, vista)
     lp_view = resample_view(low_p, vista)
@@ -724,71 +743,11 @@ with st.spinner("🔄 Cargando modelos desde el repositorio…"):
         ls_view, us_view = ls_view.cumsum(), us_view.cumsum()
 
 # =============================================================================
-# DF DESCARGAS (rango + mensual)  ✅ (para sidebar)
+# DEFAULT manual total
 # =============================================================================
-df_range = pd.DataFrame({
-    "Fecha": dates_view,
-    "Prophet": pred_prophet.loc[dates_view].values,
-    "SARIMAX": pred_sarimax.loc[dates_view].values,
-    "Prophet_low": low_p.loc[dates_view].values,
-    "Prophet_up": up_p.loc[dates_view].values,
-    "SARIMAX_low": low_s.loc[dates_view].values,
-    "SARIMAX_up": up_s.loc[dates_view].values,
-})
-df_range["Diff_Prophet_minus_SARIMAX"] = df_range["Prophet"] - df_range["SARIMAX"]
-
-df_range_dt = df_range.copy()
-df_range_dt["Fecha"] = pd.to_datetime(df_range_dt["Fecha"])
-df_month = (
-    df_range_dt.set_index("Fecha")[["Prophet", "SARIMAX", "Diff_Prophet_minus_SARIMAX"]]
-    .resample("MS").sum()
-    .reset_index()
-)
-df_month["Mes"] = df_month["Fecha"].dt.strftime("%Y-%m")
-df_month = df_month.drop(columns=["Fecha"])
-
-# =============================================================================
-# SIDEBAR: TOP PRODUCTOS + DESCARGAS ✅
-# =============================================================================
-with st.sidebar:
-    st.markdown("---")
-    st.markdown('<div class="sidebar-section">🛒 Top productos</div>', unsafe_allow_html=True)
-
-    top_n = st.slider("Top N", min_value=5, max_value=30, value=10, step=1)
-
-    filtro_prod = st.text_input("Filtrar producto (texto)", value="")
-
-    base_total_2025 = st.selectbox(
-        "Total 2025 para repartir por mix",
-        ["Prophet", "SARIMAX", "Promedio", "Manual"],
-        index=0
-    )
-
-    total_2025_manual = st.number_input(
-        "Total 2025 manual (HL)",
-        min_value=0.0,
-        value=float(pred_prophet.sum()),
-        step=1000.0
-    )
-
-    st.markdown("---")
-    st.markdown('<div class="sidebar-section">⬇️ Descargas</div>', unsafe_allow_html=True)
-
-    # CSV (rango)
-    csv_bytes = df_range.to_csv(index=False).encode("utf-8")
-    btn_download("Descargar CSV (rango)", csv_bytes, "forecast_rango.csv", "text/csv")
-
-    # Excel (rango + mensual)
-    xlsx_bytes = dfs_to_excel_bytes({
-        "Rango_Diario": df_range,
-        "Resumen_Mensual": df_month,
-    })
-    btn_download(
-        "Descargar Excel (rango + mensual)",
-        xlsx_bytes,
-        "forecast_rango_mensual.xlsx",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
+# Para que el número manual no aparezca en 0 al inicio
+if total_2025_manual == 0.0:
+    total_2025_manual = float(pred_prophet.sum())
 
 # =============================================================================
 # TABS
@@ -926,6 +885,36 @@ with tab2:
     plt.tight_layout()
     show_pyplot(fig)
 
+    # ---- TABLA MENSUAL + DESCARGAS (integrado desde tu código local)
+    df_month = df_compare.resample("MS").sum().copy()
+
+    if mostrar_resumen_mensual:
+        st.markdown("#### 🗓️ Resumen mensual (sumas)")
+        df_show(
+            df_month.style.format({
+                "Prophet": "{:,.2f}",
+                "SARIMAX": "{:,.2f}",
+                "Diff": "{:,.2f}",
+            })
+        )
+
+    st.markdown("#### ⬇️ Descargas")
+    df_range = df_compare.reset_index().rename(columns={"index": "Fecha"}).copy()
+    csv_bytes = df_range.to_csv(index=False).encode("utf-8")
+    btn_download("⬇️ Descargar CSV (rango)", csv_bytes, "forecast_rango.csv", "text/csv")
+
+    df_month_out = df_month.reset_index().rename(columns={"index": "Mes"}).copy()
+    xlsx_bytes = dfs_to_excel_bytes({
+        "Rango_Diario": df_range,
+        "Resumen_Mensual": df_month_out
+    })
+    btn_download(
+        "⬇️ Descargar Excel (rango + mensual)",
+        xlsx_bytes,
+        "forecast_rango_mensual.xlsx",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
 # ── TAB 3
 with tab3:
     st.markdown('<h2 class="subtitle">Detalle por Modelo</h2>', unsafe_allow_html=True)
@@ -1001,13 +990,10 @@ with tab4:
     st.markdown("<hr/>", unsafe_allow_html=True)
 
     mix_2024, total_2024 = build_mix_producto_2024(df_base, COL_FECHA, COL_PRODUCTO, COL_VOL, year=2024)
+    fc_2025 = forecast_by_mix(mix_2024, TOTAL_2025_FORECAST)
 
-    # Filtro por texto (simple, no complejo)
-    mix_view = mix_2024.copy()
-    if filtro_prod.strip():
-        mix_view = mix_view[mix_view["PRODUCTO"].str.contains(filtro_prod, case=False, na=False)]
-
-    fc_2025 = forecast_by_mix(mix_view, TOTAL_2025_FORECAST)
+    # ✅ dinámico y seguro (si pides más de lo que existe)
+    top_n_eff = int(min(top_n, len(mix_2024)))
 
     left, right = st.columns(2)
 
@@ -1015,7 +1001,7 @@ with tab4:
         st.markdown('<div class="custom-card">', unsafe_allow_html=True)
         st.markdown("#### 📌 Top productos 2024 (real)")
         st.caption(f"Total 2024 (HL): {total_2024:,.0f}")
-        top_2024 = mix_view.head(top_n).copy()
+        top_2024 = mix_2024.head(top_n_eff).copy()
         df_show(
             top_2024[["PRODUCTO", "VENTA_2024_HL", "PARTICIPACION_%"]]
             .style.format({"VENTA_2024_HL": "{:,.2f}", "PARTICIPACION_%": "{:.4%}"})
@@ -1024,13 +1010,13 @@ with tab4:
 
         plot_top_bars_dark(
             top_2024, "PRODUCTO", "VENTA_2024_HL",
-            f"Top {top_n} productos 2024 (HL)", color="#3d5cff"
+            f"Top {top_n_eff} productos 2024 (HL)", color="#3d5cff"
         )
 
     with right:
         st.markdown('<div class="custom-card">', unsafe_allow_html=True)
         st.markdown("#### 📌 Top productos 2025 (estimado por mix 2024)")
-        top_2025 = fc_2025.head(top_n).copy()
+        top_2025 = fc_2025.head(top_n_eff).copy()
         df_show(
             top_2025[["PRODUCTO", "PARTICIPACION_%", "VENTA_2025_EST_HL"]]
             .style.format({"PARTICIPACION_%": "{:.4%}", "VENTA_2025_EST_HL": "{:,.2f}"})
@@ -1039,26 +1025,8 @@ with tab4:
 
         plot_top_bars_dark(
             top_2025, "PRODUCTO", "VENTA_2025_EST_HL",
-            f"Top {top_n} productos 2025 estimado (HL)", color="#00c07a"
+            f"Top {top_n_eff} productos 2025 estimado (HL)", color="#00c07a"
         )
-
-    st.markdown("---")
-    st.markdown("#### ⬇️ Descargas (Top + Mix + Forecast por participación)")
-
-    mix_xlsx = dfs_to_excel_bytes({
-        "Mix_2024": mix_view,
-        "Forecast_2025_por_mix": fc_2025,
-        "Top_2024": top_2024,
-        "Top_2025": top_2025,
-    })
-    btn_download(
-        "Descargar Excel (mix 2024 + forecast 2025)",
-        mix_xlsx,
-        "mix_2024_forecast_2025.xlsx",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
-
-    st.caption("Nota: el Top 2025 aquí es ESTIMADO asumiendo que el mix de productos 2024 se mantiene en 2025 (participación constante).")
 
 # ── TAB 5: SEGMENTACIÓN
 with tab5:
@@ -1097,7 +1065,6 @@ with tab5:
     with right:
         st.markdown('<div class="custom-card">', unsafe_allow_html=True)
         st.markdown("#### 📋 Resumen por cluster (estilo slide)")
-        st.caption(f"Silhouette (k={k}): {sil:.3f} · Fecha corte: {pd.to_datetime(fecha_corte).date()}")
         df_show(
             resumen.style.format({
                 "Recency_media": "{:.2f}",
