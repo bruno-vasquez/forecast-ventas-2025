@@ -413,12 +413,7 @@ with st.sidebar:
     acumulado = st.checkbox("Acumulado", value=False)
     mostrar_intervalos = st.checkbox("Intervalos de confianza", value=True)
 
-    st.markdown("---")
-    c1, c2 = st.columns(2)
-    with c1:
-        run_pred = st.button("🔄 Recalcular", use_container_width=True)
-    with c2:
-        clear_cache = st.button("🧹 Reset", use_container_width=True)
+    
 
 if clear_cache:
     st.session_state.pred_cache = None
@@ -766,6 +761,15 @@ with tab5:
                 "df_scores": df_scores,
                 "fecha_corte": fecha_corte,
             }
+
+    seg = st.session_state.get("seg_cache", None)
+
+    required = {"rfv_k", "summary", "sil", "k_final"}
+    if (not isinstance(seg, dict)) or (not required.issubset(seg.keys())):
+        st.session_state["seg_cache"] = None
+        st.rerun()
+
+    k_final = seg["k_final"]
 
     seg = st.session_state.seg_cache
     rfv_k = seg["rfv_k"]
