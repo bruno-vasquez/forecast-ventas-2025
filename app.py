@@ -495,7 +495,13 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs(
 # =============================================================================
 # CALC PRED (cache)
 # =============================================================================
-if run_pred or st.session_state.pred_cache is None:
+# --- INIT seguro ---
+if "pred_cache" not in st.session_state:
+    st.session_state["pred_cache"] = None
+
+run_pred = st.sidebar.button("🔄 Recalcular predicciones")
+
+if run_pred or st.session_state.get("pred_cache") is None:
     with st.spinner("🔄 Calculando predicciones…"):
         dates, pred_p, low_p, up_p, pred_s, low_s, up_s = compute_predictions_2025(int(anticipacion_dias))
 
@@ -506,11 +512,16 @@ if run_pred or st.session_state.pred_cache is None:
         low_s  = apply_operational_zeros(low_s,  FERIADOS_2025, activar=zeros_operativos)
         up_s   = apply_operational_zeros(up_s,   FERIADOS_2025, activar=zeros_operativos)
 
-        st.session_state.pred_cache = {
+        st.session_state["pred_cache"] = {
             "dates": dates,
             "pred_p": pred_p, "low_p": low_p, "up_p": up_p,
             "pred_s": pred_s, "low_s": low_s, "up_s": up_s,
         }
+else:
+    cache = st.session_state["pred_cache"]
+    dates  = cache["dates"]
+    pred_p = cache["pred_p"]; low_p = cache["low_p"]; up_p = cache["up_p"]
+    pred_s = cache["pred_s"]; low_s = cache["low_s"]; up_s = cache["up_s"]
 
 pred_cache = st.session_state.pred_cache
 dates = pred_cache["dates"]
