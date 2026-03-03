@@ -33,7 +33,7 @@ st.set_page_config(
 )
 
 # =============================================================================
-# ESTILOS
+# ESTILOS (tus estilos, sin tocar lo esencial)
 # =============================================================================
 st.markdown(
     """
@@ -41,14 +41,11 @@ st.markdown(
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700;800&family=DM+Mono:wght@400;500&display=swap');
 *, html, body, [class*="css"] { font-family: 'Plus Jakarta Sans', sans-serif; }
 
-/* LIGHT MODE TOKENS */
 :root {
-  --bg-base:#f0f4ff; --bg-card:#ffffff; --bg-card2:#f8faff; --bg-sidebar:#1a1f3a;
+  --bg-base:#f0f4ff; --bg-card:#ffffff; --bg-sidebar:#1a1f3a;
   --text-primary:#0d1333; --text-secondary:#3d4575; --text-muted:#7c85b3; --text-on-dark:#e8ecff;
-  --border-light:rgba(99,120,255,0.14); --border-card:rgba(99,120,255,0.20);
+  --border-card:rgba(99,120,255,0.20);
   --shadow-card:0 4px 24px rgba(30,50,180,0.08), 0 1px 4px rgba(30,50,180,0.06);
-  --shadow-hover:0 12px 36px rgba(30,50,180,0.16);
-  --accent-blue:#3d5cff; --accent-cyan:#00c9e0; --accent-green:#00c07a; --accent-amber:#f5a623; --accent-red:#f04b4b;
   --gradient-hero:linear-gradient(135deg,#3d5cff 0%,#00c9e0 100%);
   --gradient-card:linear-gradient(135deg,rgba(61,92,255,0.07) 0%,rgba(0,201,224,0.05) 100%);
   --gradient-btn:linear-gradient(135deg,#3d5cff 0%,#00c9e0 100%);
@@ -58,21 +55,18 @@ st.markdown(
   --tab-active-border:rgba(61,92,255,0.35);
 }
 
-/* DARK MODE TOKENS */
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg-base:#080d1e; --bg-card:rgba(14,20,48,0.90); --bg-card2:rgba(20,28,62,0.85); --bg-sidebar:rgba(8,12,30,0.98);
+    --bg-base:#080d1e; --bg-card:rgba(14,20,48,0.90); --bg-sidebar:rgba(8,12,30,0.98);
     --text-primary:#e8ecff; --text-secondary:#a0aad0; --text-muted:#5c6899; --text-on-dark:#e8ecff;
-    --border-light:rgba(99,120,255,0.12); --border-card:rgba(99,120,255,0.18);
+    --border-card:rgba(99,120,255,0.18);
     --shadow-card:0 4px 32px rgba(0,0,0,0.45), 0 1px 6px rgba(0,0,0,0.30);
-    --shadow-hover:0 14px 48px rgba(61,92,255,0.22);
     --gradient-card:linear-gradient(135deg,rgba(61,92,255,0.10) 0%,rgba(0,201,224,0.06) 100%);
     --tab-bg:rgba(14,20,48,0.80); --tab-inactive:rgba(14,20,48,0.60);
     --tab-active-bg:linear-gradient(135deg,rgba(61,92,255,0.22) 0%,rgba(0,201,224,0.16) 100%);
   }
 }
 
-/* APP BACKGROUND */
 [data-testid="stAppViewContainer"] {
   background:
     radial-gradient(ellipse 900px 520px at 10% -10%, rgba(61,92,255,0.18), transparent 60%),
@@ -83,62 +77,33 @@ st.markdown(
   min-height: 100vh;
 }
 
-/* SIDEBAR */
 [data-testid="stSidebar"] { background: var(--bg-sidebar) !important; border-right: 1px solid var(--border-card); }
 [data-testid="stSidebar"] * { color: var(--text-on-dark) !important; }
-[data-testid="stSidebar"] h1,[data-testid="stSidebar"] h2,[data-testid="stSidebar"] h3 { color:#ffffff !important; }
-[data-testid="stSidebar"] .sidebar-section {
-  font-size:0.72rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color: var(--accent-cyan) !important;
-  margin:1.4rem 0 0.5rem 0; padding-bottom:0.3rem; border-bottom:1px solid rgba(0,201,224,0.20);
-}
 
-/* MAIN TITLE */
 .main-title {
   font-size:2.8rem; font-weight:800; background: var(--gradient-hero);
   -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
   text-align:center; padding:1.4rem 0 0.4rem; letter-spacing:-0.02em; line-height:1.1;
 }
-.main-subtitle { text-align:center; color: var(--text-muted); font-size:1.02rem; font-weight:400; margin-bottom:1.8rem; }
+.main-subtitle { text-align:center; color: var(--text-muted); font-size:1.02rem; margin-bottom:1.8rem; }
 
-/* CARDS */
 .custom-card {
   background: var(--bg-card); background-image: var(--gradient-card);
-  border-radius:18px; padding:1.4rem 1.5rem; box-shadow: var(--shadow-card);
+  border-radius:18px; padding:1.2rem 1.4rem; box-shadow: var(--shadow-card);
   margin:0.8rem 0; border:1px solid var(--border-card);
   position:relative; overflow:hidden;
 }
 .custom-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background: var(--gradient-hero); }
 
-/* TABS */
 .stTabs [data-baseweb="tab-list"] { gap:6px; background: var(--tab-bg); border:1px solid var(--border-card); border-radius:16px; padding:0.40rem; }
-.stTabs [data-baseweb="tab"] {
-  height:44px; background: var(--tab-inactive); border-radius:12px; color: var(--text-secondary);
-  font-weight:700; font-size:0.90rem; padding:0 1.3rem; border:1px solid transparent;
-}
-.stTabs [aria-selected="true"] {
-  background: var(--tab-active-bg) !important; color: var(--text-primary) !important; border-color: var(--tab-active-border) !important;
-}
+.stTabs [data-baseweb="tab"] { height:44px; background: var(--tab-inactive); border-radius:12px; color: var(--text-secondary); font-weight:700; font-size:0.90rem; padding:0 1.3rem; border:1px solid transparent; }
+.stTabs [aria-selected="true"] { background: var(--tab-active-bg) !important; color: var(--text-primary) !important; border-color: var(--tab-active-border) !important; }
 
-/* BUTTONS */
-.stButton > button, .stDownloadButton > button {
-  color:#ffffff !important; border:none; border-radius:12px; padding:0.65rem 1.5rem; font-weight:700;
-}
-.stButton > button { background: var(--gradient-btn); }
-.stDownloadButton > button { background: var(--gradient-dl); }
+.stButton > button { background: var(--gradient-btn); color:#fff !important; border:none; border-radius:12px; padding:0.65rem 1.5rem; font-weight:700; }
+.stDownloadButton > button { background: var(--gradient-dl); color:#fff !important; border:none; border-radius:12px; padding:0.65rem 1.3rem; font-weight:700; }
 
-/* DATAFRAME */
-[data-testid="stDataFrame"] { border-radius:14px; overflow:hidden; border:1px solid var(--border-card); box-shadow: var(--shadow-card); }
-.dataframe thead tr th {
-  background: linear-gradient(135deg, #1a2a6c 0%, #3d5cff 100%) !important;
-  color:#ffffff !important; font-weight:700 !important;
-}
-.dataframe tbody tr td { font-family: 'DM Mono', monospace !important; }
-
-/* FOOTER */
-.app-footer { text-align:center; color: var(--text-muted); padding:1.8rem 0; font-size:0.88rem; border-top:1px solid var(--border-light); margin-top:1.5rem; }
-.app-footer strong {
-  background: var(--gradient-hero); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
-}
+.app-footer { text-align:center; color: var(--text-muted); padding:1.8rem 0; font-size:0.88rem; border-top:1px solid rgba(99,120,255,0.14); margin-top:1.5rem; }
+.app-footer strong { background: var(--gradient-hero); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
 </style>
 """,
     unsafe_allow_html=True,
@@ -167,8 +132,25 @@ def show_pyplot(fig):
     finally:
         plt.close(fig)
 
+def _apply_chart_style(fig, ax, title="", xlabel="Fecha", ylabel="Volumen (HL)"):
+    CHART_BG = "#0e1428"
+    FG = "#c8d0f0"
+    GRID = (0.38, 0.42, 0.68, 0.18)
+
+    fig.patch.set_facecolor(CHART_BG)
+    ax.set_facecolor(CHART_BG)
+    ax.tick_params(colors=FG, labelsize=10)
+    for spine in ax.spines.values():
+        spine.set_alpha(0.25)
+        spine.set_color((0.38, 0.42, 0.68, 0.30))
+    ax.grid(True, alpha=0.30, linestyle="--", linewidth=0.6, color=GRID)
+    ax.set_title(title, fontsize=15, fontweight="800", pad=16, color="#e8ecff")
+    ax.set_xlabel(xlabel, fontsize=12, fontweight="600", color=FG)
+    ax.set_ylabel(ylabel, fontsize=12, fontweight="600", color=FG)
+    return FG
+
 # =============================================================================
-# FUNCIONES DRIVE + LECTURA CSV
+# DRIVE + CSV
 # =============================================================================
 @st.cache_data(show_spinner=False)
 def ensure_csv_from_drive(file_id: str, local_path: str) -> str:
@@ -197,45 +179,13 @@ def load_base_csv_from_drive(file_id: str) -> pd.DataFrame:
     return df
 
 # =============================================================================
-# PATHS MODELOS
+# MODELOS
 # =============================================================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODELS_DIR = os.path.join(BASE_DIR, "modelos")
 PROPHET_PATH = os.path.join(MODELS_DIR, "prophet_model.joblib")
 SARIMAX_PATH = os.path.join(MODELS_DIR, "sarimax_model.joblib")
 
-# =============================================================================
-# COLUMNAS DEL CSV (auto para mix/fechas de forecasting)
-# =============================================================================
-DATE_CANDIDATES = ["FECHA_CIERRE", "FECHA_SALIDA", "FECHA"]
-PROD_CANDIDATES = ["PRODUCTO", "PRODUCTO "]
-VOL_CANDIDATES  = ["VOLUMEN_VENDIDO_NETA", "HL", "VOLUMEN_HL", "VENTA_HL"]
-
-def pick_existing(df: pd.DataFrame, candidates: list[str], label: str) -> str:
-    cols = set(df.columns)
-    for c in candidates:
-        if c in cols:
-            return c
-    st.error(f"❌ No encontré columna para **{label}**. Probé: {candidates}")
-    st.write("📌 Columnas detectadas en tu CSV:")
-    st.write(list(df.columns))
-    st.stop()
-
-# =============================================================================
-# FERIADOS 2025
-# =============================================================================
-FERIADOS_2025 = pd.to_datetime(
-    [
-        "2025-01-01", "2025-01-22", "2025-03-03",
-        "2025-03-04", "2025-04-18", "2025-05-01",
-        "2025-06-21", "2025-08-06", "2025-08-16",
-        "2025-09-14", "2025-11-02", "2025-12-25",
-    ]
-)
-
-# =============================================================================
-# HELPERS MODELOS / FEATURES / VIEWS
-# =============================================================================
 @st.cache_resource
 def load_model(path: str):
     return joblib.load(path)
@@ -246,8 +196,19 @@ def is_prophet_model(obj) -> bool:
     return ("prophet" in mod) or ("fbprophet" in mod) or (name == "prophet")
 
 def is_statsmodels_model(obj) -> bool:
-    mod = obj.__class__.__module__.lower()
-    return "statsmodels" in mod
+    return "statsmodels" in obj.__class__.__module__.lower()
+
+# =============================================================================
+# FERIADOS 2025 (puedes ampliar)
+# =============================================================================
+FERIADOS_2025 = pd.to_datetime(
+    [
+        "2025-01-01", "2025-01-22", "2025-03-03",
+        "2025-03-04", "2025-04-18", "2025-05-01",
+        "2025-06-21", "2025-08-06", "2025-08-16",
+        "2025-09-14", "2025-11-02", "2025-12-25",
+    ]
+)
 
 def build_feriado_anticipado(dates: pd.DatetimeIndex, feriados: pd.DatetimeIndex, anticipacion_dias: int = 7) -> pd.Series:
     idx = pd.DatetimeIndex(dates)
@@ -257,9 +218,12 @@ def build_feriado_anticipado(dates: pd.DatetimeIndex, feriados: pd.DatetimeIndex
         s.loc[s.index.isin(rango)] = 1
     return s
 
-def apply_operational_zeros(pred: pd.Series, feriados: pd.DatetimeIndex) -> pd.Series:
+def apply_operational_zeros(pred: pd.Series, feriados: pd.DatetimeIndex, activar: bool = True) -> pd.Series:
     pred = pred.copy()
     pred.index = pd.to_datetime(pred.index)
+    if not activar:
+        pred.loc[pred < 0] = 0
+        return pred
     mask = (pred.index.dayofweek == 6) | (pred.index.isin(pd.to_datetime(feriados)))
     pred.loc[mask] = 0
     pred.loc[pred < 0] = 0
@@ -274,66 +238,35 @@ def resample_view(s: pd.Series, vista: str) -> pd.Series:
         return s.resample("MS").sum()
     return s
 
-def _apply_chart_style(fig, ax_list, title="", xlabel="Fecha", ylabel="Volumen (HL)"):
-    CHART_BG = "#0e1428"
-    CHART_FG = "#c8d0f0"
-    GRID_C = (0.38, 0.42, 0.68, 0.18)
-    SPINE_C = (0.38, 0.42, 0.68, 0.25)
-    TITLE_C = "#e8ecff"
+# =============================================================================
+# MIX PRODUCTO
+# =============================================================================
+DATE_CANDIDATES = ["FECHA_CIERRE", "FECHA_SALIDA", "FECHA"]
+PROD_CANDIDATES = ["PRODUCTO", "PRODUCTO "]
+VOL_CANDIDATES  = ["VOLUMEN_VENDIDO_NETA", "HL", "VOLUMEN_HL", "VENTA_HL"]
 
-    fig.patch.set_facecolor(CHART_BG)
-    for ax in (ax_list if isinstance(ax_list, (list, tuple)) else [ax_list]):
-        ax.set_facecolor(CHART_BG)
-        ax.tick_params(colors=CHART_FG, labelsize=10)
-        ax.xaxis.label.set_color(CHART_FG)
-        ax.yaxis.label.set_color(CHART_FG)
-        for spine in ax.spines.values():
-            spine.set_alpha(0.35)
-            spine.set_color(SPINE_C)
-        ax.grid(True, alpha=0.35, linestyle="--", linewidth=0.6, color=GRID_C)
+def pick_existing(df: pd.DataFrame, candidates: list[str], label: str) -> str:
+    cols = set(df.columns)
+    for c in candidates:
+        if c in cols:
+            return c
+    st.error(f"❌ No encontré columna para **{label}**. Probé: {candidates}")
+    st.write("📌 Columnas detectadas:", list(df.columns))
+    st.stop()
 
-        if xlabel:
-            ax.set_xlabel(xlabel, fontsize=12, fontweight="600", color=CHART_FG)
-        if ylabel:
-            ax.set_ylabel(ylabel, fontsize=12, fontweight="600", color=CHART_FG)
-        if title:
-            ax.set_title(title, fontsize=15, fontweight="800", pad=16, color=TITLE_C)
-
-    return CHART_FG, TITLE_C
-
-def plot_with_ci(index, mean, low=None, up=None, title="", color="#3d5cff"):
-    fig, ax = plt.subplots(figsize=(14, 5.5))
-    fg, _ = _apply_chart_style(fig, ax, title=title)
-
-    ax.plot(index, mean, label="Predicción", linewidth=2.4, color=color,
-            zorder=3, marker="o", markersize=3.2, alpha=0.95)
-
-    if low is not None and up is not None:
-        ax.fill_between(index, low, up, alpha=0.16, color=color, label="IC 95%", zorder=2)
-
-    leg = ax.legend(loc="best", frameon=True, fontsize=10, facecolor="#1a2040", edgecolor="none")
-    for text in leg.get_texts():
-        text.set_color(fg)
-
-    plt.xticks(rotation=40)
-    plt.tight_layout()
-    return fig
-
-def build_mix_producto_2024(df: pd.DataFrame, col_fecha: str, col_producto: str, col_vol: str, year: int = 2024):
+def build_mix_producto(df: pd.DataFrame, col_fecha: str, col_producto: str, col_vol: str, year: int):
     dfx = df.copy()
     dfx[col_fecha] = pd.to_datetime(dfx[col_fecha], errors="coerce")
     dfx = dfx.dropna(subset=[col_fecha, col_producto])
-
     dfx[col_producto] = dfx[col_producto].astype(str).str.strip()
     dfx = dfx[dfx[col_producto] != ""]
-
     dfx[col_vol] = pd.to_numeric(dfx[col_vol], errors="coerce").fillna(0)
 
-    dfy = dfx[dfx[col_fecha].dt.year == year].copy()
+    dfy = dfx[dfx[col_fecha].dt.year == int(year)].copy()
     total_year = float(dfy[col_vol].sum())
 
     mix = (
-        dfy.groupby([col_producto], as_index=False)[col_vol]
+        dfy.groupby(col_producto, as_index=False)[col_vol]
         .sum()
         .rename(columns={col_producto: "PRODUCTO", col_vol: f"VENTA_{year}_HL"})
     )
@@ -341,41 +274,21 @@ def build_mix_producto_2024(df: pd.DataFrame, col_fecha: str, col_producto: str,
     mix = mix.sort_values(f"VENTA_{year}_HL", ascending=False)
     return mix, total_year
 
-def forecast_by_mix(mix_df: pd.DataFrame, total_2025_forecast: float):
+def forecast_by_mix(mix_df: pd.DataFrame, total_forecast: float):
     out = mix_df.copy()
-    out["VENTA_2025_EST_HL"] = out["PARTICIPACION_%"] * float(total_2025_forecast)
-    out = out.sort_values("VENTA_2025_EST_HL", ascending=False)
-    return out
-
-def plot_top_bars_dark(df_top: pd.DataFrame, x_col: str, y_col: str, title: str, color: str):
-    fig, ax = plt.subplots(figsize=(16, 7.2))
-    fg, _ = _apply_chart_style(fig, ax, title=title, xlabel="Volumen (HL)", ylabel="")
-
-    d = df_top.iloc[::-1].copy()
-    ax.barh(d[x_col].astype(str), d[y_col].astype(float), color=color, alpha=0.90)
-
-    ax.tick_params(axis="y", labelsize=10, colors=fg)
-    ax.tick_params(axis="x", labelsize=10, colors=fg)
-
-    maxv = float(d[y_col].max()) if len(d) else 0.0
-    pad = maxv * 0.01 if maxv > 0 else 0.0
-    for i, v in enumerate(d[y_col].astype(float).values):
-        ax.text(v + pad, i, f"{v:,.0f}", va="center", ha="left", color=fg, fontsize=10, fontweight="700")
-
-    plt.tight_layout()
-    show_pyplot(fig)
+    out["VENTA_EST_HL"] = out["PARTICIPACION_%"] * float(total_forecast)
+    return out.sort_values("VENTA_EST_HL", ascending=False)
 
 # =============================================================================
-# SEGMENTACIÓN (K-Means) — RFV EXACTO A TU SCRIPT
+# SEGMENTACIÓN RFV (exacta)
 # =============================================================================
-def compute_rfv_exact(df: pd.DataFrame, year: int = 2024) -> tuple[pd.DataFrame, pd.Timestamp]:
+def compute_rfv_exact(df: pd.DataFrame, year: int) -> tuple[pd.DataFrame, pd.Timestamp]:
     dfx = df.copy()
-
     dfx["FECHA_CIERRE"] = pd.to_datetime(dfx["FECHA_CIERRE"], errors="coerce")
     dfx["FACTURA_TOTAL"] = pd.to_numeric(dfx["FACTURA_TOTAL"], errors="coerce")
     dfx["VOLUMEN_VENDIDO_NETA"] = pd.to_numeric(dfx["VOLUMEN_VENDIDO_NETA"], errors="coerce")
 
-    dfx = dfx[dfx["FECHA_CIERRE"].dt.year == year].copy()
+    dfx = dfx[dfx["FECHA_CIERRE"].dt.year == int(year)].copy()
     fecha_corte = dfx["FECHA_CIERRE"].max()
 
     rfv = (
@@ -388,29 +301,36 @@ def compute_rfv_exact(df: pd.DataFrame, year: int = 2024) -> tuple[pd.DataFrame,
         )
         .reset_index()
     )
-
     rfv["R"] = (fecha_corte - rfv["ULTIMA_FECHA"]).dt.days
     rfv["V"] = rfv["V"].fillna(0)
     rfv["M"] = rfv["M"].fillna(0)
+    return rfv[["CODIGO_CLIENTE", "R", "F", "V", "M"]].copy(), fecha_corte
 
-    rfv_final = rfv[["CODIGO_CLIENTE", "R", "F", "V", "M"]].copy()
-    return rfv_final, fecha_corte
-
-def kmeans_rfv_exact(rfv_final: pd.DataFrame, k: int = 4, random_state: int = 42) -> tuple[pd.DataFrame, float]:
-    X = rfv_final[["R", "F", "V"]].copy()
+def run_kmeans(data: pd.DataFrame, features: list[str], k: int, random_state: int = 42):
+    X = data[features].copy()
     scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
+    Xs = scaler.fit_transform(X)
 
-    km = KMeans(n_clusters=k, random_state=random_state, n_init=10)
-    out = rfv_final.copy()
-    out["Cluster"] = km.fit_predict(X_scaled)
+    km = KMeans(n_clusters=int(k), random_state=int(random_state), n_init=10)
+    labels = km.fit_predict(Xs)
 
-    sil = silhouette_score(X_scaled, out["Cluster"]) if k >= 2 else np.nan
-    return out, float(sil)
+    sil = np.nan
+    if k >= 2 and len(np.unique(labels)) > 1:
+        sil = float(silhouette_score(Xs, labels))
+    return labels, sil
 
-def build_cluster_summary_slide_style(rfv_clustered: pd.DataFrame) -> pd.DataFrame:
+def auto_k_by_silhouette(data: pd.DataFrame, features: list[str], k_min: int = 2, k_max: int = 10, random_state: int = 42):
+    best_k, best_sil = None, -1.0
+    scores = []
+    for k in range(int(k_min), int(k_max) + 1):
+        labels, sil = run_kmeans(data, features, k=k, random_state=random_state)
+        scores.append((k, sil))
+        if np.isfinite(sil) and sil > best_sil:
+            best_sil, best_k = sil, k
+    return best_k, best_sil, pd.DataFrame(scores, columns=["K", "Silhouette"])
+
+def build_cluster_summary(rfv_clustered: pd.DataFrame) -> pd.DataFrame:
     dfc = rfv_clustered.copy()
-
     total_clients = dfc["CODIGO_CLIENTE"].nunique()
     total_value = dfc["V"].sum()
 
@@ -425,140 +345,110 @@ def build_cluster_summary_slide_style(rfv_clustered: pd.DataFrame) -> pd.DataFra
         )
         .reset_index()
     )
-
     summary["%_Clientes"] = (summary["N_Clientes"] / total_clients * 100) if total_clients else 0
     summary["%_Volumen"] = (summary["Volumen_total"] / total_value * 100) if total_value else 0
 
-    summary["rank_value"] = summary["Value_HL_media"].rank(ascending=False, method="dense")
-    summary["rank_freq"] = summary["Frequency_media"].rank(ascending=False, method="dense")
-    summary["rank_rec"] = summary["Recency_media"].rank(ascending=True, method="dense")
+    summary = summary.round({
+        "Recency_media": 2, "Frequency_media": 2, "Value_HL_media": 2, "%_Clientes": 2, "%_Volumen": 2
+    })
+    return summary
 
-    def label_profile(row):
-        if row["rank_value"] == 1 and row["rank_freq"] == 1:
-            return "Premium / VIP"
-        if row["rank_rec"] == summary["rank_rec"].max() and row["rank_value"] >= 3:
-            return "Inactivos/espóradicos"
-        if row["rank_value"] <= 2 and row["rank_freq"] <= 2:
-            return "Estratégicos"
-        return "Activos medios"
-
-    summary["Perfil"] = summary.apply(label_profile, axis=1)
-
-    color_map = {
-        "Premium / VIP": "Verde",
-        "Estratégicos": "Azul",
-        "Activos medios": "Morado",
-        "Inactivos/espóradicos": "Amarillo",
-    }
-    summary["Color"] = summary["Perfil"].map(color_map).fillna("Gris")
-
-    out = summary[[
-        "Cluster", "Recency_media", "Frequency_media", "Value_HL_media",
-        "%_Clientes", "%_Volumen", "N_Clientes", "Perfil", "Color"
-    ]].copy()
-
-    out["Recency_media"] = out["Recency_media"].round(2)
-    out["Frequency_media"] = out["Frequency_media"].round(2)
-    out["Value_HL_media"] = out["Value_HL_media"].round(2)
-    out["%_Clientes"] = out["%_Clientes"].round(2)
-    out["%_Volumen"] = out["%_Volumen"].round(2)
-
-    order = {"Premium / VIP": 0, "Estratégicos": 1, "Activos medios": 2, "Inactivos/espóradicos": 3}
-    out["__ord"] = out["Perfil"].map(order).fillna(99)
-    out = out.sort_values(["__ord", "Cluster"]).drop(columns="__ord")
-    return out
-
-def plot_kmeans_fv_scatter(rfv_clustered: pd.DataFrame, title: str = "Segmentación de clientes por K-Means (F vs V)"):
+def plot_kmeans_scatter(df: pd.DataFrame, x: str, y: str, title: str):
     fig, ax = plt.subplots(figsize=(9.5, 5.5))
-    _apply_chart_style(fig, ax, title=title, xlabel="Frecuencia (F)", ylabel="Volumen Total (V)")
-
-    sc = ax.scatter(
-        rfv_clustered["F"].values,
-        rfv_clustered["V"].values,
-        c=rfv_clustered["Cluster"].values,
-        cmap="viridis",
-        alpha=0.65,
-        s=28,
-        edgecolors="none",
-        zorder=3,
-    )
+    _apply_chart_style(fig, ax, title=title, xlabel=x, ylabel=y)
+    sc = ax.scatter(df[x].values, df[y].values, c=df["Cluster"].values, cmap="viridis", alpha=0.65, s=28)
     cb = fig.colorbar(sc, ax=ax)
     cb.set_label("Cluster")
-
     plt.tight_layout()
     return fig
 
 # =============================================================================
 # HEADER
 # =============================================================================
-st.markdown('<h1 class="main-title">📈 Forecast de Ventas 2025</h1>', unsafe_allow_html=True)
+st.markdown('<h1 class="main-title">📈 Forecast de Ventas</h1>', unsafe_allow_html=True)
 st.markdown(
-    '<div class="main-subtitle">Comparación <strong>Prophet</strong> vs <strong>SARIMAX</strong> &nbsp;·&nbsp; Cochabamba, Bolivia</div>',
+    '<div class="main-subtitle">Comparación <strong>Prophet</strong> vs <strong>SARIMAX</strong> &nbsp;·&nbsp; Segmentación K-Means</div>',
     unsafe_allow_html=True,
 )
 
 # =============================================================================
-# SIDEBAR (Dinámica)
+# SESSION STATE (para que no se recalcule TODO por cada slider)
+# =============================================================================
+if "pred_cache" not in st.session_state:
+    st.session_state.pred_cache = None
+if "seg_cache" not in st.session_state:
+    st.session_state.seg_cache = None
+
+# =============================================================================
+# LOAD CSV
+# =============================================================================
+try:
+    with st.spinner("📥 Cargando CSV base desde Drive…"):
+        df_base = load_base_csv_from_drive(DRIVE_FILE_ID)
+except Exception as e:
+    st.error(f"No pude descargar/leer el CSV desde Drive: {e}")
+    st.stop()
+
+# columnas auto para mix
+COL_FECHA = pick_existing(df_base, DATE_CANDIDATES, "Fecha")
+COL_PRODUCTO = pick_existing(df_base, PROD_CANDIDATES, "Producto")
+COL_VOL = pick_existing(df_base, VOL_CANDIDATES, "Volumen")
+
+# años disponibles para segmentación / mix
+tmp_years = pd.to_datetime(df_base["FECHA_CIERRE"], errors="coerce").dropna()
+available_years = sorted(tmp_years.dt.year.unique().tolist()) if len(tmp_years) else [2024]
+
+# =============================================================================
+# SIDEBAR: CONTROLES DINÁMICOS
 # =============================================================================
 with st.sidebar:
-    st.markdown("### ⚙️ Configuración")
+    st.markdown("### ⚙️ Configuración Dinámica")
     st.markdown("---")
 
-    st.markdown('<div class="sidebar-section">📅 Parámetros del Modelo</div>', unsafe_allow_html=True)
-    anticipacion_dias = st.number_input("Días anticipación feriado", min_value=1, max_value=30, value=7, step=1)
+    st.markdown("#### 📌 Predicción")
+    pred_year = st.selectbox("Año a predecir (según modelos)", [2025], index=0)
+    # si en el futuro tienes modelos 2026, añádelo en esta lista
 
-    st.markdown("---")
-    st.markdown('<div class="sidebar-section">📊 Visualización</div>', unsafe_allow_html=True)
-    vista = st.selectbox("Agregación", ["Diario", "Semanal", "Mensual"])
+    anticipacion_dias = st.slider("Días anticipación feriado", 1, 30, 7, 1)
+    zeros_operativos = st.checkbox("Aplicar ceros operativos (domingos/feriados)", value=True)
+
+    vista = st.selectbox("Agregación", ["Diario", "Semanal", "Mensual"], index=0)
     acumulado = st.checkbox("Mostrar acumulado", value=False)
     mostrar_intervalos = st.checkbox("Intervalos de confianza", value=True)
 
     st.markdown("---")
-    st.markdown('<div class="sidebar-section">📅 Rango de Fechas</div>', unsafe_allow_html=True)
-    start_date = st.date_input("Desde", value=pd.to_datetime("2025-01-01").date())
-    end_date = st.date_input("Hasta", value=pd.to_datetime("2025-12-31").date())
+    st.markdown("#### 🛒 Productos (Top)")
+    top_n = st.slider("Top N", 5, 50, 10, 1)
+    min_vol = st.number_input("Filtro: volumen mínimo (HL) para aparecer", min_value=0.0, value=0.0, step=10.0)
+    search_prod = st.text_input("Buscar producto (contiene)", value="")
 
     st.markdown("---")
-    st.markdown('<div class="sidebar-section">🧩 Segmentación</div>', unsafe_allow_html=True)
-    year_seg = st.selectbox("Año base (RFV)", [2024, 2023, 2025], index=0)
-    k_seg = st.slider("Número de clusters (K)", min_value=2, max_value=8, value=4, step=1)
+    st.markdown("#### 🧩 Segmentación (K-Means)")
+    year_seg = st.selectbox("Año base para RFV", available_years, index=len(available_years) - 1)
+    features_mode = st.selectbox("Variables para cluster", ["R,F,V (recomendado)", "F,V (rápido)"], index=0)
+
+    use_auto_k = st.checkbox("Auto elegir K por Silhouette", value=False)
+    if use_auto_k:
+        k_min = st.slider("K mínimo", 2, 8, 2, 1)
+        k_max = st.slider("K máximo", 3, 12, 8, 1)
+        k_seg = None
+    else:
+        k_seg = st.slider("Número de clusters (K)", 2, 12, 4, 1)
+        k_min, k_max = None, None
 
     st.markdown("---")
-    st.caption("ℹ️ Ceros operativos (domingos / feriados) activados por defecto.")
-
-if pd.to_datetime(end_date) < pd.to_datetime(start_date):
-    st.error("⚠️ Rango inválido: la fecha de inicio debe ser anterior a la fecha de fin.")
-    st.stop()
-
-# =============================================================================
-# LOAD CSV (DRIVE)
-# =============================================================================
-try:
-    with st.spinner("📥 Descargando CSV base desde Google Drive (solo la primera vez)…"):
-        df_base = load_base_csv_from_drive(DRIVE_FILE_ID)
-except Exception as e:
-    st.error(f"No pude descargar/leer el CSV desde Drive: {e}")
-    df_base = None
-
-# Resolver columnas para mix (forecast)
-if df_base is not None:
-    COL_FECHA = pick_existing(df_base, DATE_CANDIDATES, "Fecha")
-    COL_PRODUCTO = pick_existing(df_base, PROD_CANDIDATES, "Producto")
-    COL_VOL = pick_existing(df_base, VOL_CANDIDATES, "Volumen")
+    colb1, colb2 = st.columns(2)
+    with colb1:
+        run_pred = st.button("🔄 Recalcular predicción", use_container_width=True)
+    with colb2:
+        run_seg = st.button("🧩 Recalcular segmentación", use_container_width=True)
 
 # =============================================================================
-# LOAD & PREDICT
+# CARGA MODELOS (solo una vez)
 # =============================================================================
-dates_2025 = pd.date_range("2025-01-01", "2025-12-31", freq="D")
-mask_range = (dates_2025 >= pd.to_datetime(start_date)) & (dates_2025 <= pd.to_datetime(end_date))
-dates_view = dates_2025[mask_range]
-
-with st.spinner("🔄 Cargando modelos desde el repositorio…"):
-    if not os.path.exists(PROPHET_PATH):
-        st.error(f"No se encontró: {PROPHET_PATH}")
-        st.stop()
-    if not os.path.exists(SARIMAX_PATH):
-        st.error(f"No se encontró: {SARIMAX_PATH}")
+with st.spinner("📦 Cargando modelos…"):
+    if not os.path.exists(PROPHET_PATH) or not os.path.exists(SARIMAX_PATH):
+        st.error("Faltan modelos en la carpeta /modelos (prophet_model.joblib y sarimax_model.joblib).")
         st.stop()
 
     m1 = load_model(PROPHET_PATH)
@@ -566,265 +456,309 @@ with st.spinner("🔄 Cargando modelos desde el repositorio…"):
 
     if is_prophet_model(m1) and is_statsmodels_model(m2):
         prophet_model, sarimax_model = m1, m2
-        swapped = False
     elif is_prophet_model(m2) and is_statsmodels_model(m1):
         prophet_model, sarimax_model = m2, m1
-        swapped = True
     else:
-        st.error("No pude identificar claramente Prophet y SARIMAX en los .joblib del repositorio.")
-        st.write("prophet_model.joblib:", type(m1), "module:", m1.__class__.__module__)
-        st.write("sarimax_model.joblib:", type(m2), "module:", m2.__class__.__module__)
+        st.error("No pude identificar claramente Prophet y SARIMAX en los .joblib.")
+        st.write("m1:", type(m1), m1.__class__.__module__)
+        st.write("m2:", type(m2), m2.__class__.__module__)
         st.stop()
 
-    if swapped:
-        st.warning("⚠️ Los archivos .joblib estaban cruzados. Se aplicó swap automático (Prophet ↔ SARIMAX).")
+# =============================================================================
+# FUNC: CALC PRED
+# =============================================================================
+@st.cache_data(show_spinner=False)
+def compute_predictions_2025(anticipacion_dias: int):
+    dates = pd.date_range("2025-01-01", "2025-12-31", freq="D")
 
-    exog_2025 = pd.DataFrame(index=dates_2025)
-    exog_2025["ES_FERIADO_ANTICIPADO"] = build_feriado_anticipado(exog_2025.index, FERIADOS_2025, anticipacion_dias).values
+    exog = pd.DataFrame(index=dates)
+    exog["ES_FERIADO_ANTICIPADO"] = build_feriado_anticipado(exog.index, FERIADOS_2025, anticipacion_dias).values
 
-    future = pd.DataFrame({"ds": dates_2025})
-    future["ES_FERIADO_ANTICIPADO"] = exog_2025["ES_FERIADO_ANTICIPADO"].values
+    # Prophet
+    future = pd.DataFrame({"ds": dates})
+    future["ES_FERIADO_ANTICIPADO"] = exog["ES_FERIADO_ANTICIPADO"].values
     fc_p = prophet_model.predict(future)
 
-    pred_prophet = pd.Series(fc_p["yhat"].values, index=dates_2025)
-    low_p = pd.Series(fc_p["yhat_lower"].values, index=dates_2025)
-    up_p = pd.Series(fc_p["yhat_upper"].values, index=dates_2025)
+    pred_p = pd.Series(fc_p["yhat"].values, index=dates)
+    low_p = pd.Series(fc_p["yhat_lower"].values, index=dates)
+    up_p = pd.Series(fc_p["yhat_upper"].values, index=dates)
 
-    fc_s = sarimax_model.get_forecast(steps=len(exog_2025), exog=exog_2025)
-    pred_sarimax = pd.Series(np.asarray(fc_s.predicted_mean), index=dates_2025)
+    # SARIMAX
+    fc_s = sarimax_model.get_forecast(steps=len(exog), exog=exog)
+    pred_s = pd.Series(np.asarray(fc_s.predicted_mean), index=dates)
     ci_s = fc_s.conf_int()
-    low_s = pd.Series(np.asarray(ci_s.iloc[:, 0]), index=dates_2025)
-    up_s = pd.Series(np.asarray(ci_s.iloc[:, 1]), index=dates_2025)
+    low_s = pd.Series(np.asarray(ci_s.iloc[:, 0]), index=dates)
+    up_s = pd.Series(np.asarray(ci_s.iloc[:, 1]), index=dates)
 
-    pred_prophet = apply_operational_zeros(pred_prophet, FERIADOS_2025)
-    pred_sarimax = apply_operational_zeros(pred_sarimax, FERIADOS_2025)
-    low_p = apply_operational_zeros(low_p, FERIADOS_2025)
-    up_p = apply_operational_zeros(up_p, FERIADOS_2025)
-    low_s = apply_operational_zeros(low_s, FERIADOS_2025)
-    up_s = apply_operational_zeros(up_s, FERIADOS_2025)
+    return dates, pred_p, low_p, up_p, pred_s, low_s, up_s
 
-    p_view = resample_view(pred_prophet, vista)
-    s_view = resample_view(pred_sarimax, vista)
-    lp_view = resample_view(low_p, vista)
-    up_view = resample_view(up_p, vista)
-    ls_view = resample_view(low_s, vista)
-    us_view = resample_view(up_s, vista)
-
+def apply_view(pred, low, up, vista, acumulado):
+    p = resample_view(pred, vista)
+    l = resample_view(low, vista)
+    u = resample_view(up, vista)
     if acumulado:
-        p_view, s_view = p_view.cumsum(), s_view.cumsum()
-        lp_view, up_view = lp_view.cumsum(), up_view.cumsum()
-        ls_view, us_view = ls_view.cumsum(), us_view.cumsum()
-
-# =============================================================================
-# SIDEBAR: TOP PRODUCTOS (Dinámico)
-# =============================================================================
-with st.sidebar:
-    st.markdown("---")
-    st.markdown('<div class="sidebar-section">🛒 Top productos</div>', unsafe_allow_html=True)
-
-    top_n = st.slider("Top N", min_value=5, max_value=30, value=10, step=1)
-
-    base_total_2025 = st.selectbox(
-        "Total 2025 para repartir por mix",
-        ["Prophet", "SARIMAX", "Promedio", "Manual"],
-        index=0
-    )
-
-    total_2025_manual = st.number_input(
-        "Total 2025 manual (HL)",
-        min_value=0.0,
-        value=float(pred_prophet.sum()),
-        step=1000.0
-    )
+        p, l, u = p.cumsum(), l.cumsum(), u.cumsum()
+    return p, l, u
 
 # =============================================================================
 # TABS
 # =============================================================================
 tab1, tab2, tab3, tab4, tab5 = st.tabs(
-    ["📊  Resumen", "🔄  Comparación", "🔎  Detalle", "📈  Estadísticas", "🧩  Segmentación (K-Means)"]
+    ["📊 Resumen", "🔄 Comparación", "🔎 Detalle", "🛒 Productos", "🧩 Segmentación"]
 )
 
-# ── TAB 1: RESUMEN
+# =============================================================================
+# PRED: recalcular si botón o si no hay cache
+# =============================================================================
+if run_pred or st.session_state.pred_cache is None:
+    with st.spinner("🔄 Calculando predicciones…"):
+        dates, pred_p, low_p, up_p, pred_s, low_s, up_s = compute_predictions_2025(int(anticipacion_dias))
+
+        # ceros operativos
+        pred_p2 = apply_operational_zeros(pred_p, FERIADOS_2025, activar=zeros_operativos)
+        pred_s2 = apply_operational_zeros(pred_s, FERIADOS_2025, activar=zeros_operativos)
+        low_p2 = apply_operational_zeros(low_p, FERIADOS_2025, activar=zeros_operativos)
+        up_p2  = apply_operational_zeros(up_p, FERIADOS_2025, activar=zeros_operativos)
+        low_s2 = apply_operational_zeros(low_s, FERIADOS_2025, activar=zeros_operativos)
+        up_s2  = apply_operational_zeros(up_s, FERIADOS_2025, activar=zeros_operativos)
+
+        st.session_state.pred_cache = {
+            "dates": dates,
+            "pred_p": pred_p2, "low_p": low_p2, "up_p": up_p2,
+            "pred_s": pred_s2, "low_s": low_s2, "up_s": up_s2,
+        }
+
+pred_cache = st.session_state.pred_cache
+dates = pred_cache["dates"]
+pred_p = pred_cache["pred_p"]; low_p = pred_cache["low_p"]; up_p = pred_cache["up_p"]
+pred_s = pred_cache["pred_s"]; low_s = pred_cache["low_s"]; up_s = pred_cache["up_s"]
+
+p_view, lp_view, up_view = apply_view(pred_p, low_p, up_p, vista, acumulado)
+s_view, ls_view, us_view = apply_view(pred_s, low_s, up_s, vista, acumulado)
+
+# =============================================================================
+# TAB 1: RESUMEN + DESCARGAS CSV
+# =============================================================================
 with tab1:
-    st.markdown('<h2 class="subtitle">Resumen Ejecutivo</h2>', unsafe_allow_html=True)
-
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("🟢 Prophet", f"{pred_prophet.sum():,.0f} HL")
-    col2.metric("🟠 SARIMAX", f"{pred_sarimax.sum():,.0f} HL")
-
-    diff = pred_prophet.sum() - pred_sarimax.sum()
-    delta_pct = (diff / pred_sarimax.sum() * 100) if pred_sarimax.sum() != 0 else 0.0
-    col3.metric("📊 Diferencia", f"{abs(diff):,.0f} HL", delta=f"{delta_pct:+.1f}%")
-    col4.metric("📈 Promedio", f"{((pred_prophet.sum() + pred_sarimax.sum()) / 2):,.0f} HL")
-
-    st.markdown("<hr/>", unsafe_allow_html=True)
-
-    idx_common = p_view.index.intersection(s_view.index)
-    df_mean = pd.DataFrame({"Prophet": p_view.loc[idx_common], "SARIMAX": s_view.loc[idx_common]}, index=idx_common)
-
-    fig, ax = plt.subplots(figsize=(16, 6.5))
-    _apply_chart_style(fig, ax, title="Prophet vs SARIMAX — Comparación Anual 2025", xlabel="Fecha", ylabel="Volumen (HL)")
-    ax.plot(df_mean.index, df_mean["Prophet"], label="Prophet", linewidth=3, color="#00c07a", marker="o", markersize=4)
-    ax.plot(df_mean.index, df_mean["SARIMAX"], label="SARIMAX", linewidth=3, color="#f5a623", marker="s", markersize=4)
-    ax.legend(loc="best", frameon=True, fontsize=11, facecolor="#1a2040", edgecolor="none")
-    plt.xticks(rotation=40)
-    plt.tight_layout()
-    show_pyplot(fig)
-
-# ── TAB 2: COMPARACIÓN
-with tab2:
-    st.markdown('<h2 class="subtitle">Comparación Detallada</h2>', unsafe_allow_html=True)
-
-    df_compare = pd.DataFrame({
-        "Prophet": pred_prophet.loc[dates_view],
-        "SARIMAX": pred_sarimax.loc[dates_view],
-    })
-    df_compare["Diff"] = df_compare["Prophet"] - df_compare["SARIMAX"]
-
+    st.markdown('<div class="custom-card">', unsafe_allow_html=True)
     col1, col2, col3 = st.columns(3)
-    col1.metric("Prophet (rango)", f"{df_compare['Prophet'].sum():,.0f} HL")
-    col2.metric("SARIMAX (rango)", f"{df_compare['SARIMAX'].sum():,.0f} HL")
-    col3.metric("Diferencia", f"{df_compare['Diff'].sum():,.0f} HL")
+    col1.metric("🟢 Total Prophet", f"{pred_p.sum():,.0f} HL")
+    col2.metric("🟠 Total SARIMAX", f"{pred_s.sum():,.0f} HL")
+    diff = float(pred_p.sum() - pred_s.sum())
+    col3.metric("📌 Diferencia", f"{diff:,.0f} HL")
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(16, 10))
-    _apply_chart_style(fig, ax1, title="Comparación en Rango Seleccionado", xlabel="", ylabel="Volumen (HL)")
-    _apply_chart_style(fig, ax2, title="Diferencias Diarias (Prophet − SARIMAX)", xlabel="Fecha", ylabel="Diferencia (HL)")
+    # CSV diario (predicciones)
+    df_pred = pd.DataFrame({
+        "ds": dates,
+        "prophet_yhat": pred_p.values,
+        "prophet_low": low_p.values,
+        "prophet_up": up_p.values,
+        "sarimax_mean": pred_s.values,
+        "sarimax_low": low_s.values,
+        "sarimax_up": up_s.values,
+        "diff_prophet_minus_sarimax": (pred_p.values - pred_s.values)
+    })
 
-    ax1.plot(df_compare.index, df_compare["Prophet"], label="Prophet", linewidth=2.5, color="#00c07a", marker="o", markersize=3)
-    ax1.plot(df_compare.index, df_compare["SARIMAX"], label="SARIMAX", linewidth=2.5, color="#f5a623", marker="s", markersize=3)
-    ax1.legend(loc="best", frameon=True, fontsize=10, facecolor="#1a2040", edgecolor="none")
+    st.markdown("### 📥 Descargas rápidas")
+    cA, cB = st.columns(2)
+    with cA:
+        btn_download(
+            "⬇️ Descargar predicciones DIARIAS (CSV)",
+            df_pred.to_csv(index=False).encode("utf-8"),
+            "predicciones_diarias_2025.csv",
+            "text/csv"
+        )
+    with cB:
+        df_view = pd.DataFrame({
+            "fecha": p_view.index.astype(str),
+            f"prophet_{vista.lower()}": p_view.values,
+            f"sarimax_{vista.lower()}": s_view.values,
+            "diff": (p_view.values - s_view.values),
+        })
+        btn_download(
+            f"⬇️ Descargar predicciones {vista.upper()} (CSV)",
+            df_view.to_csv(index=False).encode("utf-8"),
+            f"predicciones_{vista.lower()}_2025.csv",
+            "text/csv"
+        )
 
-    colors = np.where(df_compare["Diff"] >= 0, "#00c07a", "#f04b4b")
-    ax2.bar(df_compare.index, df_compare["Diff"], color=colors, alpha=0.75, width=0.8)
-    ax2.axhline(y=0, color="#5c6899", linestyle="--", linewidth=1.2, alpha=0.8)
-
-    plt.xticks(rotation=40)
-    fig.subplots_adjust(hspace=0.38)
+# =============================================================================
+# TAB 2: COMPARACIÓN (gráfico + tabla)
+# =============================================================================
+with tab2:
+    st.markdown('<div class="custom-card">', unsafe_allow_html=True)
+    fig, ax = plt.subplots(figsize=(16, 6.2))
+    _apply_chart_style(fig, ax, title=f"Prophet vs SARIMAX — Vista {vista}", xlabel="Fecha", ylabel="Volumen (HL)")
+    ax.plot(p_view.index, p_view.values, label="Prophet", linewidth=2.6, color="#00c07a")
+    ax.plot(s_view.index, s_view.values, label="SARIMAX", linewidth=2.6, color="#f5a623")
+    ax.legend(loc="best", frameon=True)
+    plt.xticks(rotation=35)
     plt.tight_layout()
     show_pyplot(fig)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-# ── TAB 3: DETALLE
+    st.markdown("#### 📋 Tabla comparativa (vista actual)")
+    df_show(pd.DataFrame({
+        "fecha": p_view.index.astype(str),
+        "prophet": p_view.values,
+        "sarimax": s_view.values,
+        "diff": (p_view.values - s_view.values),
+    }))
+
+# =============================================================================
+# TAB 3: DETALLE (con/ sin intervalos)
+# =============================================================================
 with tab3:
-    st.markdown('<h2 class="subtitle">Detalle por Modelo</h2>', unsafe_allow_html=True)
-
-    colA, colB = st.columns(2)
-
-    with colA:
-        st.markdown('<div class="custom-card">', unsafe_allow_html=True)
-        st.markdown("### 🟢 Prophet")
-        st.markdown("---")
-        if mostrar_intervalos:
-            fig = plot_with_ci(p_view.index, p_view.values, lp_view.values, up_view.values, f"Prophet — Vista {vista}", color="#00c07a")
-        else:
-            fig = plot_with_ci(p_view.index, p_view.values, title=f"Prophet — Vista {vista}", color="#00c07a")
-        show_pyplot(fig)
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    with colB:
-        st.markdown('<div class="custom-card">', unsafe_allow_html=True)
-        st.markdown("### 🟠 SARIMAX")
-        st.markdown("---")
-        if mostrar_intervalos:
-            fig = plot_with_ci(s_view.index, s_view.values, ls_view.values, us_view.values, f"SARIMAX — Vista {vista}", color="#f5a623")
-        else:
-            fig = plot_with_ci(s_view.index, s_view.values, title=f"SARIMAX — Vista {vista}", color="#f5a623")
-        show_pyplot(fig)
-        st.markdown("</div>", unsafe_allow_html=True)
-
-# ── TAB 4: ESTADÍSTICAS
-with tab4:
-    st.markdown('<h2 class="subtitle">Top productos 2024 (real) y 2025 (estimado por mix 2024)</h2>', unsafe_allow_html=True)
-
-    if df_base is None:
-        st.warning("No se pudo cargar el CSV base desde Drive. Revisa permisos/enlace.")
-        st.stop()
-
-    total_2025_prophet = float(pred_prophet.sum())
-    total_2025_sarimax = float(pred_sarimax.sum())
-
-    if base_total_2025 == "Prophet":
-        TOTAL_2025_FORECAST = total_2025_prophet
-    elif base_total_2025 == "SARIMAX":
-        TOTAL_2025_FORECAST = total_2025_sarimax
-    elif base_total_2025 == "Promedio":
-        TOTAL_2025_FORECAST = (total_2025_prophet + total_2025_sarimax) / 2.0
-    else:
-        TOTAL_2025_FORECAST = float(total_2025_manual)
-
-    mix_2024, total_2024 = build_mix_producto_2024(df_base, COL_FECHA, COL_PRODUCTO, COL_VOL, year=2024)
-    fc_2025 = forecast_by_mix(mix_2024, TOTAL_2025_FORECAST)
-
     left, right = st.columns(2)
 
     with left:
         st.markdown('<div class="custom-card">', unsafe_allow_html=True)
-        st.markdown("#### 📌 Top productos 2024 (real)")
-        st.caption(f"Total 2024 (HL): {total_2024:,.0f}")
-        top_2024 = mix_2024.head(top_n).copy()
-        df_show(top_2024[["PRODUCTO", "VENTA_2024_HL", "PARTICIPACION_%"]].style.format({"VENTA_2024_HL": "{:,.2f}", "PARTICIPACION_%": "{:.4%}"}))
+        fig, ax = plt.subplots(figsize=(14, 5.5))
+        _apply_chart_style(fig, ax, title=f"Prophet — {vista}", xlabel="Fecha", ylabel="HL")
+        ax.plot(p_view.index, p_view.values, linewidth=2.6, color="#00c07a", label="Prophet")
+        if mostrar_intervalos:
+            ax.fill_between(p_view.index, lp_view.values, up_view.values, alpha=0.15, color="#00c07a", label="IC")
+        ax.legend()
+        plt.xticks(rotation=35); plt.tight_layout()
+        show_pyplot(fig)
         st.markdown("</div>", unsafe_allow_html=True)
-        plot_top_bars_dark(top_2024, "PRODUCTO", "VENTA_2024_HL", f"Top {top_n} productos 2024 (HL)", color="#3d5cff")
 
     with right:
         st.markdown('<div class="custom-card">', unsafe_allow_html=True)
-        st.markdown("#### 📌 Top productos 2025 (estimado por mix 2024)")
-        top_2025 = fc_2025.head(top_n).copy()
-        df_show(top_2025[["PRODUCTO", "PARTICIPACION_%", "VENTA_2025_EST_HL"]].style.format({"PARTICIPACION_%": "{:.4%}", "VENTA_2025_EST_HL": "{:,.2f}"}))
+        fig, ax = plt.subplots(figsize=(14, 5.5))
+        _apply_chart_style(fig, ax, title=f"SARIMAX — {vista}", xlabel="Fecha", ylabel="HL")
+        ax.plot(s_view.index, s_view.values, linewidth=2.6, color="#f5a623", label="SARIMAX")
+        if mostrar_intervalos:
+            ax.fill_between(s_view.index, ls_view.values, us_view.values, alpha=0.15, color="#f5a623", label="IC")
+        ax.legend()
+        plt.xticks(rotation=35); plt.tight_layout()
+        show_pyplot(fig)
         st.markdown("</div>", unsafe_allow_html=True)
-        plot_top_bars_dark(top_2025, "PRODUCTO", "VENTA_2025_EST_HL", f"Top {top_n} productos 2025 estimado (HL)", color="#00c07a")
 
-# ── TAB 5: SEGMENTACIÓN (Dinámica)
-with tab5:
-    st.markdown('<h2 class="subtitle">Segmentación de Clientes (K-Means)</h2>', unsafe_allow_html=True)
-
-    if df_base is None:
-        st.warning("No se pudo cargar el CSV base desde Drive.")
-        st.stop()
-
-    required_cols = {"FECHA_CIERRE", "CODIGO_CLIENTE", "VOLUMEN_VENDIDO_NETA", "FACTURA_TOTAL"}
-    missing = [c for c in required_cols if c not in df_base.columns]
-    if missing:
-        st.error(f"Faltan columnas necesarias para segmentación EXACTA: {missing}")
-        st.write("Columnas detectadas:", list(df_base.columns))
-        st.stop()
-
-    # K dinámico (sin mostrar random state)
-    rfv_final, fecha_corte = compute_rfv_exact(df_base, year=int(year_seg))
-    rfv_k, sil = kmeans_rfv_exact(rfv_final, k=int(k_seg), random_state=42)
-    resumen = build_cluster_summary_slide_style(rfv_k)
-
+# =============================================================================
+# TAB 4: PRODUCTOS (Top dinámico + búsqueda + filtro mínimo)
+# =============================================================================
+with tab4:
     st.markdown('<div class="custom-card">', unsafe_allow_html=True)
-    st.write(f"📌 **Año base:** {year_seg}  ·  **K:** {k_seg}  ·  **Silhouette:** {sil:.3f}")
+    st.markdown("### 🛒 Productos — Top dinámico")
+
+    mix_year = st.selectbox("Año para mix (participación)", available_years, index=len(available_years) - 1)
+
+    mix, total_mix = build_mix_producto(df_base, COL_FECHA, COL_PRODUCTO, COL_VOL, year=int(mix_year))
+
+    # filtros dinámicos
+    if float(min_vol) > 0:
+        mix = mix[mix[f"VENTA_{mix_year}_HL"] >= float(min_vol)].copy()
+    if search_prod.strip():
+        mix = mix[mix["PRODUCTO"].str.contains(search_prod.strip(), case=False, na=False)].copy()
+
+    mix_top = mix.head(int(top_n)).copy()
+
+    st.caption(f"Total {mix_year} (HL): {total_mix:,.0f} · Filas luego de filtros: {len(mix):,}")
+    df_show(mix_top.style.format({f"VENTA_{mix_year}_HL": "{:,.2f}", "PARTICIPACION_%": "{:.4%}"}))
+
+    btn_download(
+        "⬇️ Descargar top filtrado (CSV)",
+        mix_top.to_csv(index=False).encode("utf-8"),
+        f"top_productos_{mix_year}_filtrado.csv",
+        "text/csv"
+    )
     st.markdown("</div>", unsafe_allow_html=True)
 
-    left, right = st.columns([1.15, 1.0])
+# =============================================================================
+# TAB 5: SEGMENTACIÓN (K dinámico + AutoK + descarga)
+# =============================================================================
+with tab5:
+    st.markdown('<div class="custom-card">', unsafe_allow_html=True)
+    st.markdown("### 🧩 Segmentación de Clientes (K-Means)")
 
-    with left:
-        st.markdown('<div class="custom-card">', unsafe_allow_html=True)
-        fig = plot_kmeans_fv_scatter(rfv_k, title="Segmentación de clientes por K-Means (F vs V)")
-        show_pyplot(fig)
-        st.caption("F = número de compras (conteo). V = volumen total (HL). Colores = cluster.")
-        st.markdown("</div>", unsafe_allow_html=True)
+    required_cols = {"FECHA_CIERRE", "CODIGO_CLIENTE", "VOLUMEN_VENDIDO_NETA", "FACTURA_TOTAL"}
+    miss = [c for c in required_cols if c not in df_base.columns]
+    if miss:
+        st.error(f"Faltan columnas para segmentación: {miss}")
+        st.stop()
 
-    with right:
-        st.markdown('<div class="custom-card">', unsafe_allow_html=True)
-        st.markdown("#### 📋 Resumen por cluster (estilo slide)")
-        df_show(
-            resumen.style.format({
-                "Recency_media": "{:.2f}",
-                "Frequency_media": "{:.2f}",
-                "Value_HL_media": "{:,.2f}",
-                "%_Clientes": "{:.2f}%",
-                "%_Volumen": "{:.2f}%",
-                "N_Clientes": "{:,.0f}",
-            })
+    # recalcular segmentación si botón o no hay cache
+    if run_seg or st.session_state.seg_cache is None:
+        with st.spinner("🧩 Calculando segmentación…"):
+            rfv, fecha_corte = compute_rfv_exact(df_base, year=int(year_seg))
+
+            if features_mode.startswith("R"):
+                feats = ["R", "F", "V"]
+            else:
+                feats = ["F", "V"]
+
+            if use_auto_k:
+                best_k, best_sil, df_scores = auto_k_by_silhouette(rfv, feats, k_min=int(k_min), k_max=int(k_max), random_state=42)
+                k_used = best_k if best_k is not None else int(k_min)
+            else:
+                df_scores = None
+                k_used = int(k_seg)
+
+            labels, sil = run_kmeans(rfv, feats, k=int(k_used), random_state=42)
+
+            rfv_k = rfv.copy()
+            rfv_k["Cluster"] = labels
+            summary = build_cluster_summary(rfv_k)
+
+            st.session_state.seg_cache = {
+                "rfv_k": rfv_k,
+                "summary": summary,
+                "sil": sil,
+                "k_used": k_used,
+                "feats": feats,
+                "df_scores": df_scores,
+                "fecha_corte": fecha_corte,
+            }
+
+    seg = st.session_state.seg_cache
+    rfv_k = seg["rfv_k"]
+    summary = seg["summary"]
+    sil = seg["sil"]
+    k_used = seg["k_used"]
+    feats = seg["feats"]
+    df_scores = seg["df_scores"]
+    fecha_corte = seg["fecha_corte"]
+
+    st.write(f"📌 **Año base:** {year_seg}  ·  **Fecha corte:** {str(fecha_corte)[:10]}  ·  **Features:** {', '.join(feats)}")
+    st.success(f"✅ K usado: {k_used} · Silhouette: {sil:.3f}" if np.isfinite(sil) else f"✅ K usado: {k_used} · Silhouette: N/A")
+
+    if df_scores is not None:
+        st.markdown("#### 🔍 AutoK — Silhouette por K")
+        df_show(df_scores)
+        btn_download(
+            "⬇️ Descargar evaluación AutoK (CSV)",
+            df_scores.to_csv(index=False).encode("utf-8"),
+            f"autok_silhouette_{year_seg}.csv",
+            "text/csv"
         )
-        st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("---")
-    st.markdown("#### 📥 Descargar segmentación")
-    out_csv = rfv_k.sort_values("Cluster").to_csv(index=False).encode("utf-8")
-    btn_download("📄 Descargar RFV + Cluster (CSV)", out_csv, "segmentacion_kmeans_rfv.csv", "text/csv")
+    st.markdown("#### 📋 Resumen por cluster")
+    df_show(summary.style.format({
+        "Recency_media": "{:.2f}",
+        "Frequency_media": "{:.2f}",
+        "Value_HL_media": "{:,.2f}",
+        "%_Clientes": "{:.2f}%",
+        "%_Volumen": "{:.2f}%",
+        "N_Clientes": "{:,.0f}",
+        "Volumen_total": "{:,.2f}",
+    }))
+
+    # scatter dinámico: si tienes R,F,V -> plot F vs V; si FV -> plot F vs V igual
+    st.markdown("#### 📌 Scatter (F vs V)")
+    fig = plot_kmeans_scatter(rfv_k, "F", "V", "K-Means — Frecuencia vs Volumen")
+    show_pyplot(fig)
+
+    st.markdown("### 📥 Descargar segmentación")
+    btn_download(
+        "⬇️ Descargar RFV + Cluster (CSV)",
+        rfv_k.sort_values("Cluster").to_csv(index=False).encode("utf-8"),
+        f"segmentacion_kmeans_{year_seg}_k{k_used}.csv",
+        "text/csv"
+    )
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 # =============================================================================
 # FOOTER
@@ -832,7 +766,7 @@ with tab5:
 st.markdown(
     """
 <div class="app-footer">
-  <strong>Forecast de Ventas 2025</strong> &nbsp;·&nbsp; Cochabamba, Bolivia
+  <strong>Forecast de Ventas</strong> &nbsp;·&nbsp; Cochabamba, Bolivia
 </div>
 """,
     unsafe_allow_html=True,
