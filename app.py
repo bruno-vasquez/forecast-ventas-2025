@@ -33,7 +33,7 @@ st.set_page_config(
 )
 
 # =============================================================================
-# ESTILOS (tus estilos, sin tocar lo esencial)
+# ESTILOS
 # =============================================================================
 st.markdown(
     """
@@ -54,7 +54,6 @@ st.markdown(
   --tab-active-bg:linear-gradient(135deg,rgba(61,92,255,0.12) 0%,rgba(0,201,224,0.10) 100%);
   --tab-active-border:rgba(61,92,255,0.35);
 }
-
 @media (prefers-color-scheme: dark) {
   :root {
     --bg-base:#080d1e; --bg-card:rgba(14,20,48,0.90); --bg-sidebar:rgba(8,12,30,0.98);
@@ -85,7 +84,7 @@ st.markdown(
   -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
   text-align:center; padding:1.4rem 0 0.4rem; letter-spacing:-0.02em; line-height:1.1;
 }
-.main-subtitle { text-align:center; color: var(--text-muted); font-size:1.02rem; margin-bottom:1.8rem; }
+.main-subtitle { text-align:center; color: var(--text-muted); font-size:1.02rem; margin-bottom:1.2rem; }
 
 .custom-card {
   background: var(--bg-card); background-image: var(--gradient-card);
@@ -110,7 +109,7 @@ st.markdown(
 )
 
 # =============================================================================
-# HELPERS: compat Streamlit
+# HELPERS
 # =============================================================================
 def df_show(obj, **kwargs):
     try:
@@ -199,7 +198,7 @@ def is_statsmodels_model(obj) -> bool:
     return "statsmodels" in obj.__class__.__module__.lower()
 
 # =============================================================================
-# FERIADOS 2025 (puedes ampliar)
+# FERIADOS 2025
 # =============================================================================
 FERIADOS_2025 = pd.to_datetime(
     [
@@ -274,13 +273,8 @@ def build_mix_producto(df: pd.DataFrame, col_fecha: str, col_producto: str, col_
     mix = mix.sort_values(f"VENTA_{year}_HL", ascending=False)
     return mix, total_year
 
-def forecast_by_mix(mix_df: pd.DataFrame, total_forecast: float):
-    out = mix_df.copy()
-    out["VENTA_EST_HL"] = out["PARTICIPACION_%"] * float(total_forecast)
-    return out.sort_values("VENTA_EST_HL", ascending=False)
-
 # =============================================================================
-# SEGMENTACIÓN RFV (exacta)
+# SEGMENTACIÓN RFV
 # =============================================================================
 def compute_rfv_exact(df: pd.DataFrame, year: int) -> tuple[pd.DataFrame, pd.Timestamp]:
     dfx = df.copy()
@@ -347,9 +341,9 @@ def build_cluster_summary(rfv_clustered: pd.DataFrame) -> pd.DataFrame:
     )
     summary["%_Clientes"] = (summary["N_Clientes"] / total_clients * 100) if total_clients else 0
     summary["%_Volumen"] = (summary["Volumen_total"] / total_value * 100) if total_value else 0
-
     summary = summary.round({
-        "Recency_media": 2, "Frequency_media": 2, "Value_HL_media": 2, "%_Clientes": 2, "%_Volumen": 2
+        "Recency_media": 2, "Frequency_media": 2, "Value_HL_media": 2,
+        "%_Clientes": 2, "%_Volumen": 2, "Volumen_total": 2
     })
     return summary
 
@@ -362,17 +356,26 @@ def plot_kmeans_scatter(df: pd.DataFrame, x: str, y: str, title: str):
     plt.tight_layout()
     return fig
 
+def plot_box_by_cluster(df: pd.DataFrame, value_col: str, title: str):
+    fig, ax = plt.subplots(figsize=(10.5, 5.2))
+    _apply_chart_style(fig, ax, title=title, xlabel="Cluster", ylabel=value_col)
+    clusters = sorted(df["Cluster"].unique())
+    data = [df[df["Cluster"] == c][value_col].values for c in clusters]
+    ax.boxplot(data, labels=[str(c) for c in clusters], patch_artist=False, showfliers=False)
+    plt.tight_layout()
+    return fig
+
 # =============================================================================
 # HEADER
 # =============================================================================
-st.markdown('<h1 class="main-title">📈 Forecast de Ventas</h1>', unsafe_allow_html=True)
+st.markdown('<h1 class="main-title">📈 Forecast de Ventas 2025</h1>', unsafe_allow_html=True)
 st.markdown(
-    '<div class="main-subtitle">Comparación <strong>Prophet</strong> vs <strong>SARIMAX</strong> &nbsp;·&nbsp; Segmentación K-Means</div>',
+    '<div class="main-subtitle">Comparación <strong>Prophet</strong> vs <strong>SARIMAX</strong> · Productos · Segmentación</div>',
     unsafe_allow_html=True,
 )
 
 # =============================================================================
-# SESSION STATE (para que no se recalcule TODO por cada slider)
+# SESSION STATE
 # =============================================================================
 if "pred_cache" not in st.session_state:
     st.session_state.pred_cache = None
@@ -389,66 +392,44 @@ except Exception as e:
     st.error(f"No pude descargar/leer el CSV desde Drive: {e}")
     st.stop()
 
-# columnas auto para mix
 COL_FECHA = pick_existing(df_base, DATE_CANDIDATES, "Fecha")
 COL_PRODUCTO = pick_existing(df_base, PROD_CANDIDATES, "Producto")
 COL_VOL = pick_existing(df_base, VOL_CANDIDATES, "Volumen")
 
-# años disponibles para segmentación / mix
 tmp_years = pd.to_datetime(df_base["FECHA_CIERRE"], errors="coerce").dropna()
 available_years = sorted(tmp_years.dt.year.unique().tolist()) if len(tmp_years) else [2024]
 
 # =============================================================================
-# SIDEBAR: CONTROLES DINÁMICOS
+# SIDEBAR (parámetros globales)
 # =============================================================================
 with st.sidebar:
-    st.markdown("### ⚙️ Configuración Dinámica")
+    st.markdown("### ⚙️ Configuración")
     st.markdown("---")
 
-    st.markdown("#### 📌 Predicción")
-    pred_year = st.selectbox("Año a predecir (según modelos)", [2025], index=0)
-    # si en el futuro tienes modelos 2026, añádelo en esta lista
-
     anticipacion_dias = st.slider("Días anticipación feriado", 1, 30, 7, 1)
-    zeros_operativos = st.checkbox("Aplicar ceros operativos (domingos/feriados)", value=True)
+    zeros_operativos = st.checkbox("Ceros operativos (domingos/feriados)", value=True)
 
     vista = st.selectbox("Agregación", ["Diario", "Semanal", "Mensual"], index=0)
-    acumulado = st.checkbox("Mostrar acumulado", value=False)
+    acumulado = st.checkbox("Acumulado", value=False)
     mostrar_intervalos = st.checkbox("Intervalos de confianza", value=True)
 
     st.markdown("---")
-    st.markdown("#### 🛒 Productos (Top)")
-    top_n = st.slider("Top N", 5, 50, 10, 1)
-    min_vol = st.number_input("Filtro: volumen mínimo (HL) para aparecer", min_value=0.0, value=0.0, step=10.0)
-    search_prod = st.text_input("Buscar producto (contiene)", value="")
+    c1, c2 = st.columns(2)
+    with c1:
+        run_pred = st.button("🔄 Recalcular", use_container_width=True)
+    with c2:
+        clear_cache = st.button("🧹 Reset", use_container_width=True)
 
-    st.markdown("---")
-    st.markdown("#### 🧩 Segmentación (K-Means)")
-    year_seg = st.selectbox("Año base para RFV", available_years, index=len(available_years) - 1)
-    features_mode = st.selectbox("Variables para cluster", ["R,F,V (recomendado)", "F,V (rápido)"], index=0)
-
-    use_auto_k = st.checkbox("Auto elegir K por Silhouette", value=False)
-    if use_auto_k:
-        k_min = st.slider("K mínimo", 2, 8, 2, 1)
-        k_max = st.slider("K máximo", 3, 12, 8, 1)
-        k_seg = None
-    else:
-        k_seg = st.slider("Número de clusters (K)", 2, 12, 4, 1)
-        k_min, k_max = None, None
-
-    st.markdown("---")
-    colb1, colb2 = st.columns(2)
-    with colb1:
-        run_pred = st.button("🔄 Recalcular predicción", use_container_width=True)
-    with colb2:
-        run_seg = st.button("🧩 Recalcular segmentación", use_container_width=True)
+if clear_cache:
+    st.session_state.pred_cache = None
+    st.session_state.seg_cache = None
 
 # =============================================================================
-# CARGA MODELOS (solo una vez)
+# LOAD MODELS
 # =============================================================================
 with st.spinner("📦 Cargando modelos…"):
     if not os.path.exists(PROPHET_PATH) or not os.path.exists(SARIMAX_PATH):
-        st.error("Faltan modelos en la carpeta /modelos (prophet_model.joblib y sarimax_model.joblib).")
+        st.error("Faltan modelos en /modelos (prophet_model.joblib y sarimax_model.joblib).")
         st.stop()
 
     m1 = load_model(PROPHET_PATH)
@@ -465,7 +446,7 @@ with st.spinner("📦 Cargando modelos…"):
         st.stop()
 
 # =============================================================================
-# FUNC: CALC PRED
+# PRED COMPUTE
 # =============================================================================
 @st.cache_data(show_spinner=False)
 def compute_predictions_2025(anticipacion_dias: int):
@@ -481,14 +462,14 @@ def compute_predictions_2025(anticipacion_dias: int):
 
     pred_p = pd.Series(fc_p["yhat"].values, index=dates)
     low_p = pd.Series(fc_p["yhat_lower"].values, index=dates)
-    up_p = pd.Series(fc_p["yhat_upper"].values, index=dates)
+    up_p  = pd.Series(fc_p["yhat_upper"].values, index=dates)
 
     # SARIMAX
     fc_s = sarimax_model.get_forecast(steps=len(exog), exog=exog)
     pred_s = pd.Series(np.asarray(fc_s.predicted_mean), index=dates)
     ci_s = fc_s.conf_int()
     low_s = pd.Series(np.asarray(ci_s.iloc[:, 0]), index=dates)
-    up_s = pd.Series(np.asarray(ci_s.iloc[:, 1]), index=dates)
+    up_s  = pd.Series(np.asarray(ci_s.iloc[:, 1]), index=dates)
 
     return dates, pred_p, low_p, up_p, pred_s, low_s, up_s
 
@@ -508,24 +489,23 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs(
 )
 
 # =============================================================================
-# PRED: recalcular si botón o si no hay cache
+# CALC PRED (cache)
 # =============================================================================
 if run_pred or st.session_state.pred_cache is None:
     with st.spinner("🔄 Calculando predicciones…"):
         dates, pred_p, low_p, up_p, pred_s, low_s, up_s = compute_predictions_2025(int(anticipacion_dias))
 
-        # ceros operativos
-        pred_p2 = apply_operational_zeros(pred_p, FERIADOS_2025, activar=zeros_operativos)
-        pred_s2 = apply_operational_zeros(pred_s, FERIADOS_2025, activar=zeros_operativos)
-        low_p2 = apply_operational_zeros(low_p, FERIADOS_2025, activar=zeros_operativos)
-        up_p2  = apply_operational_zeros(up_p, FERIADOS_2025, activar=zeros_operativos)
-        low_s2 = apply_operational_zeros(low_s, FERIADOS_2025, activar=zeros_operativos)
-        up_s2  = apply_operational_zeros(up_s, FERIADOS_2025, activar=zeros_operativos)
+        pred_p = apply_operational_zeros(pred_p, FERIADOS_2025, activar=zeros_operativos)
+        pred_s = apply_operational_zeros(pred_s, FERIADOS_2025, activar=zeros_operativos)
+        low_p  = apply_operational_zeros(low_p,  FERIADOS_2025, activar=zeros_operativos)
+        up_p   = apply_operational_zeros(up_p,   FERIADOS_2025, activar=zeros_operativos)
+        low_s  = apply_operational_zeros(low_s,  FERIADOS_2025, activar=zeros_operativos)
+        up_s   = apply_operational_zeros(up_s,   FERIADOS_2025, activar=zeros_operativos)
 
         st.session_state.pred_cache = {
             "dates": dates,
-            "pred_p": pred_p2, "low_p": low_p2, "up_p": up_p2,
-            "pred_s": pred_s2, "low_s": low_s2, "up_s": up_s2,
+            "pred_p": pred_p, "low_p": low_p, "up_p": up_p,
+            "pred_s": pred_s, "low_s": low_s, "up_s": up_s,
         }
 
 pred_cache = st.session_state.pred_cache
@@ -536,60 +516,62 @@ pred_s = pred_cache["pred_s"]; low_s = pred_cache["low_s"]; up_s = pred_cache["u
 p_view, lp_view, up_view = apply_view(pred_p, low_p, up_p, vista, acumulado)
 s_view, ls_view, us_view = apply_view(pred_s, low_s, up_s, vista, acumulado)
 
+df_pred = pd.DataFrame({
+    "ds": dates,
+    "prophet_yhat": pred_p.values,
+    "prophet_low": low_p.values,
+    "prophet_up": up_p.values,
+    "sarimax_mean": pred_s.values,
+    "sarimax_low": low_s.values,
+    "sarimax_up": up_s.values,
+})
+df_pred["diff_prophet_minus_sarimax"] = df_pred["prophet_yhat"] - df_pred["sarimax_mean"]
+
+df_view = pd.DataFrame({
+    "fecha": p_view.index.astype(str),
+    f"prophet_{vista.lower()}": p_view.values,
+    f"sarimax_{vista.lower()}": s_view.values,
+})
+df_view["diff"] = df_view[f"prophet_{vista.lower()}"] - df_view[f"sarimax_{vista.lower()}"]
+
 # =============================================================================
-# TAB 1: RESUMEN + DESCARGAS CSV
+# TAB 1: RESUMEN (con gráficas de vuelta)
 # =============================================================================
 with tab1:
     st.markdown('<div class="custom-card">', unsafe_allow_html=True)
-    col1, col2, col3 = st.columns(3)
-    col1.metric("🟢 Total Prophet", f"{pred_p.sum():,.0f} HL")
-    col2.metric("🟠 Total SARIMAX", f"{pred_s.sum():,.0f} HL")
-    diff = float(pred_p.sum() - pred_s.sum())
-    col3.metric("📌 Diferencia", f"{diff:,.0f} HL")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("🟢 Total Prophet", f"{pred_p.sum():,.0f} HL")
+    c2.metric("🟠 Total SARIMAX", f"{pred_s.sum():,.0f} HL")
+    c3.metric("📌 Diferencia", f"{(pred_p.sum() - pred_s.sum()):,.0f} HL")
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # CSV diario (predicciones)
-    df_pred = pd.DataFrame({
-        "ds": dates,
-        "prophet_yhat": pred_p.values,
-        "prophet_low": low_p.values,
-        "prophet_up": up_p.values,
-        "sarimax_mean": pred_s.values,
-        "sarimax_low": low_s.values,
-        "sarimax_up": up_s.values,
-        "diff_prophet_minus_sarimax": (pred_p.values - pred_s.values)
-    })
-
-    st.markdown("### 📥 Descargas rápidas")
-    cA, cB = st.columns(2)
-    with cA:
-        btn_download(
-            "⬇️ Descargar predicciones DIARIAS (CSV)",
-            df_pred.to_csv(index=False).encode("utf-8"),
-            "predicciones_diarias_2025.csv",
-            "text/csv"
-        )
-    with cB:
-        df_view = pd.DataFrame({
-            "fecha": p_view.index.astype(str),
-            f"prophet_{vista.lower()}": p_view.values,
-            f"sarimax_{vista.lower()}": s_view.values,
-            "diff": (p_view.values - s_view.values),
-        })
-        btn_download(
-            f"⬇️ Descargar predicciones {vista.upper()} (CSV)",
-            df_view.to_csv(index=False).encode("utf-8"),
-            f"predicciones_{vista.lower()}_2025.csv",
-            "text/csv"
-        )
-
-# =============================================================================
-# TAB 2: COMPARACIÓN (gráfico + tabla)
-# =============================================================================
-with tab2:
     st.markdown('<div class="custom-card">', unsafe_allow_html=True)
-    fig, ax = plt.subplots(figsize=(16, 6.2))
-    _apply_chart_style(fig, ax, title=f"Prophet vs SARIMAX — Vista {vista}", xlabel="Fecha", ylabel="Volumen (HL)")
+    st.markdown("### 📥 Descargas rápidas")
+    d1, d2, d3 = st.columns(3)
+    with d1:
+        btn_download("⬇️ Predicciones DIARIAS (CSV)", df_pred.to_csv(index=False).encode("utf-8"),
+                     "predicciones_diarias_2025.csv", "text/csv")
+    with d2:
+        btn_download(f"⬇️ Predicciones {vista.upper()} (CSV)", df_view.to_csv(index=False).encode("utf-8"),
+                     f"predicciones_{vista.lower()}_2025.csv", "text/csv")
+    with d3:
+        df_exec = pd.DataFrame([{
+            "total_prophet": float(pred_p.sum()),
+            "total_sarimax": float(pred_s.sum()),
+            "diff": float(pred_p.sum() - pred_s.sum()),
+            "zeros_operativos": bool(zeros_operativos),
+            "anticipacion_dias": int(anticipacion_dias),
+            "vista": vista,
+            "acumulado": bool(acumulado),
+        }])
+        btn_download("⬇️ Resumen ejecutivo (CSV)", df_exec.to_csv(index=False).encode("utf-8"),
+                     "resumen_ejecutivo.csv", "text/csv")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # Gráfico principal (vuelto)
+    st.markdown('<div class="custom-card">', unsafe_allow_html=True)
+    fig, ax = plt.subplots(figsize=(16, 6.0))
+    _apply_chart_style(fig, ax, title=f"Prophet vs SARIMAX — Vista {vista}", xlabel="Fecha", ylabel="HL")
     ax.plot(p_view.index, p_view.values, label="Prophet", linewidth=2.6, color="#00c07a")
     ax.plot(s_view.index, s_view.values, label="SARIMAX", linewidth=2.6, color="#f5a623")
     ax.legend(loc="best", frameon=True)
@@ -598,80 +580,141 @@ with tab2:
     show_pyplot(fig)
     st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("#### 📋 Tabla comparativa (vista actual)")
-    df_show(pd.DataFrame({
-        "fecha": p_view.index.astype(str),
-        "prophet": p_view.values,
-        "sarimax": s_view.values,
-        "diff": (p_view.values - s_view.values),
-    }))
+    # Extra: diferencia
+    st.markdown('<div class="custom-card">', unsafe_allow_html=True)
+    fig, ax = plt.subplots(figsize=(16, 4.8))
+    _apply_chart_style(fig, ax, title=f"Diferencia (Prophet − SARIMAX) — {vista}", xlabel="Fecha", ylabel="HL")
+    ax.axhline(0, color="#c8d0f0", alpha=0.35, linestyle="--")
+    ax.plot(df_view["fecha"], df_view["diff"], linewidth=2.2, color="#3d5cff")
+    ax.set_xticks([])
+    plt.tight_layout()
+    show_pyplot(fig)
+    st.caption("Valores positivos: Prophet predice más. Negativos: SARIMAX predice más.")
+    st.markdown("</div>", unsafe_allow_html=True)
 
 # =============================================================================
-# TAB 3: DETALLE (con/ sin intervalos)
+# TAB 2: COMPARACIÓN (descargas aquí también)
+# =============================================================================
+with tab2:
+    st.markdown('<div class="custom-card">', unsafe_allow_html=True)
+    st.markdown("### 🔄 Comparación + Descargas")
+    a1, a2 = st.columns(2)
+    with a1:
+        btn_download("⬇️ CSV comparativo diario", df_pred.to_csv(index=False).encode("utf-8"),
+                     "comparacion_diaria.csv", "text/csv")
+    with a2:
+        btn_download(f"⬇️ CSV comparativo {vista.lower()}", df_view.to_csv(index=False).encode("utf-8"),
+                     f"comparacion_{vista.lower()}.csv", "text/csv")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown('<div class="custom-card">', unsafe_allow_html=True)
+    fig, ax = plt.subplots(figsize=(16, 6.0))
+    _apply_chart_style(fig, ax, title=f"Comparación — {vista}", xlabel="Fecha", ylabel="HL")
+    ax.plot(p_view.index, p_view.values, label="Prophet", linewidth=2.6, color="#00c07a")
+    ax.plot(s_view.index, s_view.values, label="SARIMAX", linewidth=2.6, color="#f5a623")
+    ax.legend(loc="best", frameon=True)
+    plt.xticks(rotation=35)
+    plt.tight_layout()
+    show_pyplot(fig)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("#### 📋 Tabla comparativa")
+    df_show(df_view)
+
+# =============================================================================
+# TAB 3: DETALLE (más creativo)
 # =============================================================================
 with tab3:
-    left, right = st.columns(2)
+    st.markdown('<div class="custom-card">', unsafe_allow_html=True)
+    st.markdown("### 🔎 Detalle analítico (para defensa)")
 
-    with left:
-        st.markdown('<div class="custom-card">', unsafe_allow_html=True)
-        fig, ax = plt.subplots(figsize=(14, 5.5))
-        _apply_chart_style(fig, ax, title=f"Prophet — {vista}", xlabel="Fecha", ylabel="HL")
-        ax.plot(p_view.index, p_view.values, linewidth=2.6, color="#00c07a", label="Prophet")
-        if mostrar_intervalos:
-            ax.fill_between(p_view.index, lp_view.values, up_view.values, alpha=0.15, color="#00c07a", label="IC")
-        ax.legend()
-        plt.xticks(rotation=35); plt.tight_layout()
-        show_pyplot(fig)
-        st.markdown("</div>", unsafe_allow_html=True)
+    zeros_p = int((pred_p == 0).sum())
+    zeros_s = int((pred_s == 0).sum())
 
-    with right:
-        st.markdown('<div class="custom-card">', unsafe_allow_html=True)
-        fig, ax = plt.subplots(figsize=(14, 5.5))
-        _apply_chart_style(fig, ax, title=f"SARIMAX — {vista}", xlabel="Fecha", ylabel="HL")
-        ax.plot(s_view.index, s_view.values, linewidth=2.6, color="#f5a623", label="SARIMAX")
-        if mostrar_intervalos:
-            ax.fill_between(s_view.index, ls_view.values, us_view.values, alpha=0.15, color="#f5a623", label="IC")
-        ax.legend()
-        plt.xticks(rotation=35); plt.tight_layout()
-        show_pyplot(fig)
-        st.markdown("</div>", unsafe_allow_html=True)
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Promedio Prophet (HL/día)", f"{pred_p.mean():,.2f}")
+    m2.metric("Promedio SARIMAX (HL/día)", f"{pred_s.mean():,.2f}")
+    m3.metric("Días en cero (Prophet)", f"{zeros_p}")
+    m4.metric("Días en cero (SARIMAX)", f"{zeros_s}")
+
+    st.markdown("---")
+    b1, b2 = st.columns(2)
+
+    with b1:
+        st.markdown("#### 📌 Top 10 días con mayor volumen (Prophet)")
+        top_vol = df_pred.sort_values("prophet_yhat", ascending=False).head(10)[["ds", "prophet_yhat", "sarimax_mean"]]
+        df_show(top_vol)
+
+    with b2:
+        st.markdown("#### 📌 Top 10 días con mayor diferencia (abs)")
+        top_diff = df_pred.assign(abs_diff=np.abs(df_pred["diff_prophet_minus_sarimax"])) \
+                          .sort_values("abs_diff", ascending=False).head(10)[["ds", "diff_prophet_minus_sarimax"]]
+        df_show(top_diff)
+
+    btn_download("⬇️ Descargar detalle completo (CSV)",
+                 df_pred.to_csv(index=False).encode("utf-8"),
+                 "detalle_predicciones.csv", "text/csv")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown('<div class="custom-card">', unsafe_allow_html=True)
+    st.markdown("### 📊 Histograma de diferencias (Prophet − SARIMAX)")
+    fig, ax = plt.subplots(figsize=(14, 5.2))
+    _apply_chart_style(fig, ax, title="Distribución de diferencias", xlabel="Diferencia (HL)", ylabel="Frecuencia")
+    ax.hist(df_pred["diff_prophet_minus_sarimax"].values, bins=30, alpha=0.85, color="#3d5cff")
+    plt.tight_layout()
+    show_pyplot(fig)
+    st.caption("Te ayuda a explicar si un modelo tiende a sobre/infraestimar vs el otro.")
+    st.markdown("</div>", unsafe_allow_html=True)
 
 # =============================================================================
-# TAB 4: PRODUCTOS (Top dinámico + búsqueda + filtro mínimo)
+# TAB 4: PRODUCTOS (más de 10 + ver todos)
 # =============================================================================
 with tab4:
     st.markdown('<div class="custom-card">', unsafe_allow_html=True)
-    st.markdown("### 🛒 Productos — Top dinámico")
+    st.markdown("### 🛒 Productos (Top dinámico)")
 
     mix_year = st.selectbox("Año para mix (participación)", available_years, index=len(available_years) - 1)
 
+    # Controles dentro del tab
+    cA, cB, cC = st.columns(3)
+    with cA:
+        show_n = st.number_input("Mostrar N productos", min_value=5, max_value=200, value=30, step=5)
+    with cB:
+        min_vol = st.number_input("Vol mínimo (HL)", min_value=0.0, value=0.0, step=10.0)
+    with cC:
+        search_prod = st.text_input("Buscar producto (contiene)", value="")
+
     mix, total_mix = build_mix_producto(df_base, COL_FECHA, COL_PRODUCTO, COL_VOL, year=int(mix_year))
 
-    # filtros dinámicos
     if float(min_vol) > 0:
         mix = mix[mix[f"VENTA_{mix_year}_HL"] >= float(min_vol)].copy()
     if search_prod.strip():
         mix = mix[mix["PRODUCTO"].str.contains(search_prod.strip(), case=False, na=False)].copy()
 
-    mix_top = mix.head(int(top_n)).copy()
-
     st.caption(f"Total {mix_year} (HL): {total_mix:,.0f} · Filas luego de filtros: {len(mix):,}")
+
+    mix_top = mix.head(int(show_n)).copy()
     df_show(mix_top.style.format({f"VENTA_{mix_year}_HL": "{:,.2f}", "PARTICIPACION_%": "{:.4%}"}))
 
-    btn_download(
-        "⬇️ Descargar top filtrado (CSV)",
-        mix_top.to_csv(index=False).encode("utf-8"),
-        f"top_productos_{mix_year}_filtrado.csv",
-        "text/csv"
-    )
+    d1, d2 = st.columns(2)
+    with d1:
+        btn_download("⬇️ Descargar TOP (CSV)",
+                     mix_top.to_csv(index=False).encode("utf-8"),
+                     f"top_{mix_year}.csv", "text/csv")
+    with d2:
+        btn_download("⬇️ Descargar TODO filtrado (CSV)",
+                     mix.to_csv(index=False).encode("utf-8"),
+                     f"productos_filtrados_{mix_year}.csv", "text/csv")
+
     st.markdown("</div>", unsafe_allow_html=True)
 
 # =============================================================================
-# TAB 5: SEGMENTACIÓN (K dinámico + AutoK + descarga)
+# TAB 5: SEGMENTACIÓN (K + más/menos + más gráficas + descargas)
 # =============================================================================
 with tab5:
     st.markdown('<div class="custom-card">', unsafe_allow_html=True)
-    st.markdown("### 🧩 Segmentación de Clientes (K-Means)")
+    st.markdown("### 🧩 Segmentación (K-Means)")
 
     required_cols = {"FECHA_CIERRE", "CODIGO_CLIENTE", "VOLUMEN_VENDIDO_NETA", "FACTURA_TOTAL"}
     miss = [c for c in required_cols if c not in df_base.columns]
@@ -679,25 +722,37 @@ with tab5:
         st.error(f"Faltan columnas para segmentación: {miss}")
         st.stop()
 
-    # recalcular segmentación si botón o no hay cache
-    if run_seg or st.session_state.seg_cache is None:
+    # Controles dentro del tab (subir/bajar K)
+    s1, s2, s3 = st.columns(3)
+    with s1:
+        year_seg = st.selectbox("Año base", available_years, index=len(available_years) - 1)
+    with s2:
+        features_mode = st.selectbox("Variables", ["R,F,V (recomendado)", "F,V (rápido)"], index=0)
+    with s3:
+        use_auto_k = st.checkbox("AutoK (Silhouette)", value=False)
+
+    if use_auto_k:
+        k_min = st.slider("K mínimo", 2, 8, 2, 1)
+        k_max = st.slider("K máximo", 3, 12, 8, 1)
+        k_used = None
+    else:
+        k_used = st.slider("Número de clusters (K)", 2, 20, 4, 1)
+
+    btn = st.button("🧩 Recalcular segmentación", use_container_width=True)
+
+    if btn or st.session_state.seg_cache is None:
         with st.spinner("🧩 Calculando segmentación…"):
             rfv, fecha_corte = compute_rfv_exact(df_base, year=int(year_seg))
-
-            if features_mode.startswith("R"):
-                feats = ["R", "F", "V"]
-            else:
-                feats = ["F", "V"]
+            feats = ["R", "F", "V"] if features_mode.startswith("R") else ["F", "V"]
 
             if use_auto_k:
                 best_k, best_sil, df_scores = auto_k_by_silhouette(rfv, feats, k_min=int(k_min), k_max=int(k_max), random_state=42)
-                k_used = best_k if best_k is not None else int(k_min)
+                k_final = best_k if best_k is not None else int(k_min)
             else:
                 df_scores = None
-                k_used = int(k_seg)
+                k_final = int(k_used)
 
-            labels, sil = run_kmeans(rfv, feats, k=int(k_used), random_state=42)
-
+            labels, sil = run_kmeans(rfv, feats, k=int(k_final), random_state=42)
             rfv_k = rfv.copy()
             rfv_k["Cluster"] = labels
             summary = build_cluster_summary(rfv_k)
@@ -706,7 +761,7 @@ with tab5:
                 "rfv_k": rfv_k,
                 "summary": summary,
                 "sil": sil,
-                "k_used": k_used,
+                "k_final": k_final,
                 "feats": feats,
                 "df_scores": df_scores,
                 "fecha_corte": fecha_corte,
@@ -716,47 +771,43 @@ with tab5:
     rfv_k = seg["rfv_k"]
     summary = seg["summary"]
     sil = seg["sil"]
-    k_used = seg["k_used"]
+    k_final = seg["k_final"]
     feats = seg["feats"]
     df_scores = seg["df_scores"]
     fecha_corte = seg["fecha_corte"]
 
-    st.write(f"📌 **Año base:** {year_seg}  ·  **Fecha corte:** {str(fecha_corte)[:10]}  ·  **Features:** {', '.join(feats)}")
-    st.success(f"✅ K usado: {k_used} · Silhouette: {sil:.3f}" if np.isfinite(sil) else f"✅ K usado: {k_used} · Silhouette: N/A")
+    st.write(f"📌 **Año:** {year_seg} · **Fecha corte:** {str(fecha_corte)[:10]} · **Features:** {', '.join(feats)}")
+    st.success(f"✅ K: {k_final} · Silhouette: {sil:.3f}" if np.isfinite(sil) else f"✅ K: {k_final} · Silhouette: N/A")
 
     if df_scores is not None:
         st.markdown("#### 🔍 AutoK — Silhouette por K")
         df_show(df_scores)
-        btn_download(
-            "⬇️ Descargar evaluación AutoK (CSV)",
-            df_scores.to_csv(index=False).encode("utf-8"),
-            f"autok_silhouette_{year_seg}.csv",
-            "text/csv"
-        )
+        btn_download("⬇️ Descargar AutoK (CSV)", df_scores.to_csv(index=False).encode("utf-8"),
+                     f"autok_{year_seg}.csv", "text/csv")
 
     st.markdown("#### 📋 Resumen por cluster")
-    df_show(summary.style.format({
-        "Recency_media": "{:.2f}",
-        "Frequency_media": "{:.2f}",
-        "Value_HL_media": "{:,.2f}",
-        "%_Clientes": "{:.2f}%",
-        "%_Volumen": "{:.2f}%",
-        "N_Clientes": "{:,.0f}",
-        "Volumen_total": "{:,.2f}",
-    }))
+    df_show(summary)
 
-    # scatter dinámico: si tienes R,F,V -> plot F vs V; si FV -> plot F vs V igual
+    d1, d2 = st.columns(2)
+    with d1:
+        btn_download("⬇️ Descargar RFV+Cluster (CSV)",
+                     rfv_k.sort_values("Cluster").to_csv(index=False).encode("utf-8"),
+                     f"segmentacion_{year_seg}_k{k_final}.csv", "text/csv")
+    with d2:
+        btn_download("⬇️ Descargar resumen clusters (CSV)",
+                     summary.to_csv(index=False).encode("utf-8"),
+                     f"resumen_clusters_{year_seg}_k{k_final}.csv", "text/csv")
+
+    st.markdown("---")
     st.markdown("#### 📌 Scatter (F vs V)")
     fig = plot_kmeans_scatter(rfv_k, "F", "V", "K-Means — Frecuencia vs Volumen")
     show_pyplot(fig)
 
-    st.markdown("### 📥 Descargar segmentación")
-    btn_download(
-        "⬇️ Descargar RFV + Cluster (CSV)",
-        rfv_k.sort_values("Cluster").to_csv(index=False).encode("utf-8"),
-        f"segmentacion_kmeans_{year_seg}_k{k_used}.csv",
-        "text/csv"
-    )
+    st.markdown("#### 📦 Distribución por cluster (Boxplots)")
+    fig = plot_box_by_cluster(rfv_k, "V", "Volumen (V) por cluster")
+    show_pyplot(fig)
+    fig = plot_box_by_cluster(rfv_k, "F", "Frecuencia (F) por cluster")
+    show_pyplot(fig)
 
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -766,7 +817,7 @@ with tab5:
 st.markdown(
     """
 <div class="app-footer">
-  <strong>Forecast de Ventas</strong> &nbsp;·&nbsp; Cochabamba, Bolivia
+  <strong>Forecast de Ventas 2025</strong> · Cochabamba, Bolivia
 </div>
 """,
     unsafe_allow_html=True,
