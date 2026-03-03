@@ -415,9 +415,18 @@ with st.sidebar:
 
     
 
+clear_cache = st.sidebar.checkbox("🧹 Recalcular (limpiar cachés)", value=False)
+
 if clear_cache:
-    st.session_state.pred_cache = None
-    st.session_state.seg_cache = None
+    st.cache_data.clear()
+    st.cache_resource.clear()
+
+    # Solo lo que te interesa recomputar
+    for k in ["seg_cache", "pred_cache", "mix_cache"]:
+        if k in st.session_state:
+            del st.session_state[k]
+
+    st.rerun()
 
 # =============================================================================
 # LOAD MODELS
