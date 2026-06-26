@@ -230,24 +230,14 @@ p,span,div,label { color: var(--text-primary); }
 # HELPERS: compat Streamlit
 # =============================================================================
 def df_show(obj, **kwargs):
-    try:
-        return st.dataframe(obj, width="stretch", **kwargs)
-    except TypeError:
-        return st.dataframe(obj, use_container_width=True, **kwargs)
+    st.dataframe(obj, use_container_width=True, **kwargs)
 
 def btn_download(label, data, file_name, mime, **kwargs):
-    try:
-        return st.download_button(label, data, file_name=file_name, mime=mime, width="stretch", **kwargs)
-    except TypeError:
-        return st.download_button(label, data, file_name=file_name, mime=mime, use_container_width=True, **kwargs)
+    st.download_button(label, data, file_name=file_name, mime=mime, use_container_width=True, **kwargs)
 
 def show_pyplot(fig):
-    try:
-        st.pyplot(fig, width="stretch")
-    except TypeError:
-        st.pyplot(fig, use_container_width=True)
-    finally:
-        plt.close(fig)
+    st.pyplot(fig, use_container_width=True)
+    plt.close(fig)
 
 def dfs_to_excel_bytes(sheets: dict[str, pd.DataFrame]) -> bytes:
     """
@@ -591,8 +581,11 @@ def plot_kmeans_fv_scatter(rfv_clustered: pd.DataFrame, title: str = "Segmentaci
         edgecolors="none",
         zorder=3,
     )
+    CHART_FG = "#c8d0f0"
     cb = fig.colorbar(sc, ax=ax)
-    cb.set_label("Cluster")
+    cb.set_label("Cluster", color=CHART_FG)
+    cb.ax.tick_params(colors=CHART_FG, labelcolor=CHART_FG)
+    plt.setp(cb.ax.yaxis.get_ticklabels(), color=CHART_FG)
 
     plt.tight_layout()
     return fig
@@ -955,7 +948,6 @@ with tab3:
 # ── TAB 4
 with tab4:
     st.markdown('<h2 class="subtitle">Análisis Estadístico</h2>', unsafe_allow_html=True)
-    st.markdown('<h2 class="subtitle">Top productos 2024 (real) y 2025 (estimado por mix 2024)</h2>', unsafe_allow_html=True)
 
     if df_base is None:
         st.warning("No se pudo cargar el CSV base desde Drive. Revisa permisos/enlace.")
@@ -977,22 +969,6 @@ with tab4:
         TOTAL_2025_FORECAST = float(total_2025_manual)
         base_badge = '<span class="badge">Base: Manual</span>'
 
-    # -------------------------------------------------------------------------
-    # ✅ CONTROL TOP-N (DINÁMICO) — EN EL TAB (como lo mostraste)
-    # -------------------------------------------------------------------------
-    st.markdown("---")
-    st.markdown("### 🛒 Configuración Top productos")
-    top_n = st.slider(
-        "Top N (productos a mostrar)",
-        min_value=5,
-        max_value=80,  # ajusta si quieres
-        value=10,
-        step=1
-    )
-
-    # -------------------------------------------------------------------------
-    # KPIs
-    # -------------------------------------------------------------------------
     k1, k2, k3 = st.columns(3)
     with k1:
         st.metric("Total 2025 usado (mix)", f"{TOTAL_2025_FORECAST:,.0f} HL")
@@ -1003,10 +979,8 @@ with tab4:
         st.metric("Total 2025 SARIMAX", f"{total_2025_sarimax:,.0f} HL")
 
     st.markdown("<hr/>", unsafe_allow_html=True)
+    st.markdown("#### 🛒 Top Productos 2024 (real) y 2025 (estimado por mix 2024)")
 
-    # -------------------------------------------------------------------------
-    # MIX 2024 y FORECAST 2025 por mix
-    # -------------------------------------------------------------------------
     mix_2024, total_2024 = build_mix_producto_2024(
         df_base, COL_FECHA, COL_PRODUCTO, COL_VOL, year=2024
     )
